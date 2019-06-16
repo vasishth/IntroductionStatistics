@@ -143,7 +143,7 @@ Notice that if I forget to write REML=FALSE when doing model comparison with ano
 
 # How to report your results in a paper.
 
-``A linear mixed model was fit with \{varying intercepts/varying intercepts and slopes with no correlation/varying intercepts and slopes, the maximal model\}, with SR coded as -1 and OR as +1. The dependent variable (reading time in milliseconds) was log-transformed. The results show that the object relative clause was read faster than the subject relative clause $\chi^2(1)=4.54, p=0.033$.'' 
+``A linear mixed model was fit with \{varying intercepts/varying intercepts and slopes with no correlation/varying intercepts and slopes, the maximal model\}, with SR coded as -1 and OR as +1. The dependent variable (reading time in milliseconds) was log-transformed. The results show that the object relative clause was read faster than the subject relative clause $\chi_1^2=4.54, p=0.033$.'' 
 
 
 
