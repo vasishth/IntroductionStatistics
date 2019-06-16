@@ -1,0 +1,683 @@
+\documentclass[slidestop,compress,mathserif,red]{beamer}
+%\documentclass[handout]{beamer}
+
+%\usepackage{beamerthemesplit}
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{gb4e}
+\usepackage{qtree}
+\usepackage{hyperref}
+\usepackage{ulem}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+\setbeamerfont{page number in head/foot}{size=\large}
+\setbeamertemplate{footline}[frame number]
+
+%\setbeamertemplate{footline}%
+%{%
+%\hfill\insertpagenumber\ of \ref{TotPages}\hspace{.5cm}\vspace{.5cm}
+%\hfill\insertpagenumber\ of 28\hspace{.5cm}\vspace{.5cm}
+%}%
+
+
+
+\mode<presentation>
+{
+%\usetheme{Singapore}
+%\usetheme{Berlin}
+
+%\setbeamercovered{transparent}
+
+}
+
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{normal text}{fg=black}
+
+
+%\mode<handout>
+%{
+%\usepackage{pgfpages}
+%\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=5mm]
+%}
+
+\usetheme{Montpellier}
+%\usecolortheme{beetle}
+%\usecolortheme{seagull}
+\usecolortheme{lily}
+
+\title[Lecture 2]{Introduction to statistics: The sampling distribution, t-test}
+
+\author{Shravan Vasishth}
+
+\institute{Universit\"at Potsdam\\
+vasishth@uni-potsdam.de\\
+http://www.ling.uni-potsdam.de/$\sim$vasishth
+}
+
+\date{\today}
+
+\addtobeamertemplate{navigation symbols}{}{ \hspace{1em}    \usebeamerfont{footline}%
+    \insertframenumber / \inserttotalframenumber }
+
+
+\begin{document}
+\maketitle
+
+
+
+<<setup,include=FALSE,cache=FALSE>>=
+library(knitr)
+library(coda)
+
+# set global chunk options, put figures into folder
+options(replace.assign=TRUE,show.signif.stars=FALSE)
+opts_chunk$set(fig.path='figures/figure-', fig.align='center', fig.show='hold')
+options(replace.assign=TRUE,width=75)
+opts_chunk$set(dev='postscript')
+
+@
+
+
+
+\section{The sampling distribution of the mean}
+
+\subsection{Sampling from the normal distribution}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+When we have a \textbf{single sample}, we know how to compute MLEs of the sample mean and standard deviation, $\hat \mu$ and $\hat \sigma$.
+
+Suppose now that you had many repeated samples; from each sample, you can compute the mean each time. We can simulate this situation: 
+
+<<>>=
+x<-rnorm(100,mean=500,sd=50)
+mean(x)
+x<-rnorm(100,mean=500,sd=50)
+mean(x)
+@
+
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+Let's repeatedly simulate sampling 1000 times:
+
+<<>>=
+nsim<-1000
+n<-100
+mu<-500
+sigma<-100
+samp_distrn_means<-rep(NA,nsim)
+samp_distrn_sd<-rep(NA,nsim)
+for(i in 1:nsim){
+  x<-rnorm(n,mean=mu,sd=sigma)
+  samp_distrn_means[i]<-mean(x)
+  samp_distrn_sd[i]<-sd(x)
+}
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+Plot the distribution of the means under repeated sampling:
+
+<<samplingdistrnmeans,echo=FALSE,fig.height=4>>=
+hist(samp_distrn_means,main="Samp. distrn. means",
+     freq=F,xlab=expression(hat(mu)),ylab="density")
+@
+
+\end{frame}
+
+
+\subsection{Sampling from the exponential distribution}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+Interestingly, it is not necessary that the distribution that we are sampling from be the normal distribution.
+
+<<>>=
+for(i in 1:nsim){
+  x<-rexp(n)
+  samp_distrn_means[i]<-mean(x)
+  samp_distrn_sd[i]<-sd(x)
+}
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+<<samplingdistrnmeansexp,echo=FALSE,fig.height=4>>=
+hist(samp_distrn_means,main="Samp. distrn. means",
+     freq=F,xlab=expression(hat(mu)),ylab="density")
+@
+
+\end{frame}
+
+\subsection{The central limit theorem}
+
+\begin{frame}[fragile]\frametitle{The central limit theorem}
+
+\begin{enumerate}
+\item
+For large enough sample sizes, the sampling distribution of the means will be approximately normal, regardless of the underlying distribution (as long as this distribution has a mean and variance defined for it).
+\item 
+This will be the basis for statistical inference.
+\end{enumerate}
+
+\end{frame}
+
+\subsection{Standard error}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+We can compute the standard deviation of the sampling distribution of means:
+
+<<>>=
+## estimate from simulation:
+sd(samp_distrn_means)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+A further interesting fact is that we can compute this standard deviation of the sampling distribution \textbf{from a single sample} of size $n$:
+
+$\frac{\hat\sigma}{\sqrt{n}}$
+
+<<>>=
+x<-rnorm(100,mean=500,sd=100)
+hat_sigma<-sd(x)
+hat_sigma/sqrt(n)
+@
+
+%See linear modeling notes on github for an analytical proof.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The sampling distribution of the mean}
+
+\begin{enumerate}
+\item
+So, from a sample of size $n$, and sd $\sigma$ or an MLE $\hat\sigma$, we can compute 
+
+the standard deviation of the sampling distribution of the means.
+\item We will call this standard deviation the estimated \textbf{standard error}.
+
+$SE = \frac{\hat\sigma}{\sqrt{n}}$
+
+I say \textit{estimated} because we are estimating SE using an an estimate of $\sigma$.
+
+\end{enumerate}
+
+\end{frame}
+
+\subsection{Confidence intervals}
+
+\begin{frame}[fragile]\frametitle{Confidence intervals}
+
+The standard error allows us to define a so-called \textbf{95\% confidence interval}:
+
+\begin{equation}
+\hat\mu \pm 2 SE
+\end{equation}
+
+So, for the mean, we define a 95\% confidence interval as follows:
+
+\begin{equation}
+\hat\mu \pm 2 \frac{\hat\sigma}{\sqrt{n}}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Confidence intervals}
+
+
+
+
+In our example:
+
+<<confint1>>=
+## lower bound:
+mu-(2*hat_sigma/sqrt(n))
+## upper bound:
+mu+(2*hat_sigma/sqrt(n))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The meaning of the 95\% CI}
+
+If you take repeated samples and compute the CI each time, 95\% of those CIs will contain the true population mean.
+
+<<confint2>>=
+lower<-rep(NA,nsim)
+upper<-rep(NA,nsim)
+for(i in 1:nsim){
+  x<-rnorm(n,mean=mu,sd=sigma)
+  lower[i]<-mean(x) - 2 * sd(x)/sqrt(n)
+  upper[i]<-mean(x) + 2 * sd(x)/sqrt(n)
+}
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The meaning of the 95\% CI}
+
+<<confint3>>=
+## check how many CIs contain mu:
+CIs<-ifelse(lower<mu & upper>mu,1,0)
+table(CIs)
+## approx. 95% of the CIs contain true mean:
+table(CIs)[2]/sum(table(CIs))
+@
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The meaning of the 95\% CI}
+
+<<repeatedCIsplot,echo=FALSE,fig.height=4>>=
+se <- function(x)
+      {
+        y <- x[!is.na(x)] # remove the missing values, if any
+        sqrt(var(as.vector(y))/length(y))
+}
+ci <- function (scores){
+m <- mean(scores,na.rm=TRUE)
+stderr <- se(scores)
+len <- length(scores)
+upper <- m + qt(.975, df=len-1) * stderr 
+lower <- m + qt(.025, df=len-1) * stderr 
+return(data.frame(lower=lower,upper=upper))
+}
+lower <- rep(NA,100)
+upper <- rep(NA,100)
+
+for(i in 1:100){ 
+  sample <- rnorm(100,mean=60,sd=4)
+  lower[i] <- ci(sample)$lower
+  upper[i] <- ci(sample)$upper
+}
+  
+cis <- cbind(lower,upper)
+
+store <- rep(NA,100)
+
+pop.mean<-60
+pop.sd<-4
+
+for(i in 1:100){ 
+  sample <- rnorm(100,mean=pop.mean,sd=pop.sd)
+  lower[i] <- ci(sample)$lower
+  upper[i] <- ci(sample)$upper
+  if(lower[i]<pop.mean & upper[i]>pop.mean){
+    store[i] <- TRUE} else {
+      store[i] <- FALSE}
+}
+
+## need this for the plot below:
+cis <- cbind(lower,upper)
+
+main.title<-"95% CIs in 100 repeated samples"
+
+line.width<-ifelse(store==FALSE,2,1)
+cis<-cbind(cis,line.width)
+x<-0:100
+y<-seq(55,65,by=1/10)
+plot(x,y,type="n",xlab="i-th repeated sample",
+     ylab="Scores",main=main.title)
+abline(60,0,lwd=2)
+x0<-x
+x1<-x
+arrows(x0,y0=cis[,1],
+       x1,y1=cis[,2],length=0,lwd=cis[,3])
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The meaning of the 95\% CI}
+
+\begin{enumerate}
+\item
+The 95\% CI from a particular sample does \textbf{not} mean that the probability that the true value of the mean lies inside that particular CI.
+\item
+Thus, the CI has a very confusing and (not very useful!) interpretation.
+\item
+In Bayesian statistics we use the credible interval, which has a much more sensible interpretation.
+\end{enumerate}
+
+However, for large sample sizes, the credible and confidence intervals tend to be essentially identical.
+
+For this reason, the CI is often treated (this is technically incorrect!) as a way to characterize uncertainty about our estimate of the mean.
+
+\end{frame}
+
+\begin{frame}\frametitle{Main points from this lecture}
+
+\begin{enumerate}
+\item We compute maximum likelihood estimates of the mean $\bar{x}=\hat\mu$ and standard deviation $\hat\sigma$ to get estimates of the true but unknown parameters.
+
+$\bar{x} = \frac{\sum_{i=1}^n x_i}{n}$
+
+\item For a given sample, having estimated $\hat\sigma$, we estimate the standard error:
+
+$SE=\hat\sigma/\sqrt{n}$
+
+\item This allows us to define a 95\% CI about the estimated mean:
+
+$\hat \mu \pm 2\times SE$
+\end{enumerate}
+
+From here, we move on to statistical inference and null hypothesis significance testing (NHST).
+
+\end{frame}
+
+\section{The story so far}
+
+\begin{frame}
+
+\begin{enumerate}
+\item We defined random variables.
+\item We learnt about pdfs and cdfs, and learnt how to compute $P(X<x)$.
+\item We learnt about Maximum Likelihood Estimation.
+\item We learnt about the sampling distribution of the sample means.
+\end{enumerate}
+
+This prepares the way for null hypothesis significance testing (NHST).
+
+\end{frame}
+
+\section{Statistical inference}
+
+\begin{frame}[fragile]\frametitle{Hypothesis testing}
+
+Suppose we have a random sample of size $n$, and the data come from a $N(\mu,\sigma)$ distribution. 
+
+We can estimate sample mean $\bar{x}=\hat \mu$ and $\hat\sigma$, which in turn allows us to estimate the sampling distribution of the mean under (hypothetical) repeated sampling:
+
+\begin{equation}
+N(\bar{x},\frac{\hat \sigma}{\sqrt{n}})
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The one-sample hypothesis test}
+
+Imagine taking an \textbf{independent} random sample from a random variable X that is normally distributed, with mean 12 and standard deviation 10, sample size 11. We estimate the mean and SE:
+
+<<>>=
+sample <- rnorm(11,mean=12,sd=10)
+(x_bar<-mean(sample))
+(SE<-sd(sample)/sqrt(11))
+@ 
+
+\end{frame}
+
+\subsection{The one-sample t-test}
+
+\begin{frame}[fragile]\frametitle{The one-sample test}
+
+The NHST approach is to set up a null hypothesis that $\mu$ has some fixed value. For example:
+
+\begin{equation}
+H_0: \mu = 0
+\end{equation}
+
+This amounts to assuming that the true distribution of sample means is (approximately*) normally distributed and centered around 0, \textit{with the standard error estimated from the data}.
+
+\bigskip
+* I will make this more precise in a minute.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Null hypothesis distribution}
+
+<<nullhyp,echo=FALSE,fig.height=4>>=
+x<-seq(-20,20,by=0.1)
+plot(x,dt(x,df=10),type="l",main="",
+     ylab="density")
+points(x_bar/SE,0,col="red",pch=20)
+text(x=x_bar/SE,y=0.05,label="sample mean",col="red")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{NHST}
+
+The intuitive idea is that 
+
+\begin{enumerate}
+\item
+if the sample mean $\bar{x}$ is near the hypothesized $\mu$ (here, 0), the data are (possibly) ``consistent with'' the null hypothesis distribution.
+\item
+if the sample mean $\bar{x}$ is far from the hypothesized $\mu$, the data are inconsistent with the null hypothesis distribution.
+\end{enumerate}
+
+We formalize ``near'' and ``far'' by determining how many standard errors the sample mean is from the hypothesized mean:
+
+\begin{equation}
+t \times SE = \bar{x} - \mu 
+\end{equation}
+
+This quantifies the distance of sample mean from $\mu$ in SE units.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{NHST}
+
+So, given a sample and null hypothesis mean $\mu$, we can compute the quantity: 
+
+\begin{equation}
+t  = \frac{\bar{x} - \mu}{SE}
+\end{equation}
+
+Call this the \textbf{t-value}. Its relevance will just become clear.
+
+%calculating the probability of obtaining a sample mean $\bar{x}$ (or something more extreme), under this null hypothesis distribution.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{NHST}
+
+The quantity
+
+\begin{equation}
+T  = \frac{\bar{X} - \mu}{SE}
+\end{equation}
+
+has a t-distribution, which is defined in terms of the sample size $n$. 
+We will express this as: $T \sim t(n-1)$ 
+
+Note also that, for large $n$, $T\sim N(0,1)$. 
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{NHST}
+
+Thus, given a sample size $n$, and given our null hypothesis, we can draw t-distribution corresponding to the null hypothesis distribution.
+
+For large $n$, we could even use N(0,1), although it is traditional in psychology and linguistics to always use the t-distribution no matter how large $n$ is.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The t-distribution vs the normal}
+
+\begin{enumerate}
+\item The t-distribution takes as parameter the degrees of freedom $n-1$, where $n$ is the sample size (cf.\ the normal, which takes the mean and variance/standard deviation).
+\item The t-distribution has fatter tails than the normal for small $n$, say $n<20$, but for large n, the t-distribution and the normal are essentially identical.
+\end{enumerate}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The t-distribution vs the normal}
+
+<<tversusnorm,echo=FALSE,fig.height=4>>=
+range <- seq(-4,4,.01)  
+
+op<-par(mfrow=c(2,2),pty="s")
+
+op<-par(mar=c(2,2,3,2),pty="s")
+
+ for(i in c(2,5,15,20)){
+   plot(range,dnorm(range),type="l",lty=1,
+        xlab="",ylab="",
+        cex.axis=1,cex.axis=0.8)
+   lines(range,dt(range,df=i),lty=2,lwd=1)
+   mtext(paste("df=",i),cex=1.2)
+ }
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{t-test: Rejection region}
+
+So, the null hypothesis testing procedure is:
+
+\begin{enumerate}
+\item Define the null hypothesis: for example, $H_0: \mu = 0$.
+\item Given data of size $n$, estimate $\bar{x}$, standard deviation $s$, standard error $s/\sqrt{n}$.
+\item Compute the t-value:
+
+\begin{equation}
+t=\frac{\bar{x}-\mu}{s/\sqrt{n}}
+\end{equation}
+\item Reject null hypothesis if t-value is large (to be made more precise next).
+\end{enumerate}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{t-test}
+
+How to decide when to reject the null hypothesis? Intuitively, when the t-value from the sample is so large that we end up far in \textit{either} tail of the distribution.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{t-test}
+
+<<nullhyprepeat,echo=FALSE,fig.height=4>>=
+x<-seq(-20,20,by=0.1)
+plot(x,dt(x,df=10),type="l",main="t(n-1)",
+     ylab="density")
+points(x_bar/SE,0,col="red",pch=20)
+text(x=x_bar/SE,y=0.01,label="sample mean",col="red")
+
+lower<-qt(0.025,df=10)
+upper<-qt(0.975,df=10)
+abline(v=lower)
+abline(v=upper)
+
+x1 <- seq(upper,20,abs(0.975)/5)
+y1 <- dt(x1,df=10)
+polygon(c(x1, rev(x1)), 
+        c(rep(0, length(x1)), rev(y1)), 
+        col = gray(0.3))
+
+x1 <- seq(-20,lower,abs(0.975)/5)
+y1 <- dt(x1,df=10)
+polygon(c(x1, rev(x1)), 
+        c(rep(0, length(x1)), rev(y1)), 
+        col = gray(0.3))
+
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Rejection region}
+
+\begin{enumerate}
+\item
+For a given sample size n, we can identify the ``rejection region'' by using the \texttt{qt} function (see lecture 1).
+\item
+Because the shape of the t-distribution depends on the degrees of freedom (n-1), the \textbf{critical t-value} beyond which we reject the null hypothesis will change depending on sample size. 
+\item
+For large sample sizes, say $n>50$, the rejection point is about 2.
+\end{enumerate}
+
+<<>>=
+abs(qt(0.025,df=15))
+abs(qt(0.025,df=50))
+@
+
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{t-test: Rejection region}
+
+Consider the t-value from our sample in our running example:
+
+<<>>=
+## null hypothesis mean:
+mu<-0
+(t_value<-(x_bar-mu)/SE)
+@
+
+Recall that the t-value from the sample is simply telling you the distance of the sample mean from the null hypothesis mean $\mu$ in standard error units.
+
+\begin{equation}
+t=\frac{\bar{x}-\mu}{s/\sqrt{n}} \hbox{ or } t\frac{s}{\sqrt{n}}=\bar{x}-\mu
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{t-test: Rejection region}
+
+So, for large sample sizes, if $\mid t\mid >2$ (approximately), we can reject the null hypothesis. 
+
+For a smaller sample size $n$, you can compute the exact critical t-value:
+
+\begin{verbatim}
+qt(0.025,df=n-1)
+\end{verbatim}
+
+This is the critical t-value on the \textbf{left}-hand side of the t-distribution.
+The corresponding value on the right-hand side is:
+
+\begin{verbatim}
+qt(0.975,df=n-1)
+\end{verbatim}
+
+Their absolute values are of course identical (the distribution is symmetric).
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The t-distribution vs the normal}
+
+Given the relevant degrees of freedom,
+one can compute the area under the curve as for the Normal distribution:
+
+<<probttest>>=
+pt(-2,df=10)
+pt(-2,df=20)
+pt(-2,df=50)
+@
+
+Notice that with large degrees of freedom, the area under the curve to the left of -2 is approximately 0.025.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The t.test function}
+
+The t.test function in R delivers the t-value:
+
+<<>>=
+## from t-test function:
+## t-value
+t.test(sample)$statistic
+@
+
+\end{frame}
+
+
+\end{document}
+

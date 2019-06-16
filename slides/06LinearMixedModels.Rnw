@@ -1,0 +1,974 @@
+\documentclass[slidestop,compress,mathserif,red]{beamer}
+%\documentclass[handout]{beamer}
+
+%\usepackage{beamerthemesplit}
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{gb4e}
+\usepackage{qtree}
+\usepackage{hyperref}
+\usepackage{ulem}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+\setbeamerfont{page number in head/foot}{size=\large}
+\setbeamertemplate{footline}[frame number]
+
+%\setbeamertemplate{footline}%
+%{%
+%\hfill\insertpagenumber\ of \ref{TotPages}\hspace{.5cm}\vspace{.5cm}
+%\hfill\insertpagenumber\ of 28\hspace{.5cm}\vspace{.5cm}
+%}%
+
+
+
+\mode<presentation>
+{
+%\usetheme{Singapore}
+%\usetheme{Berlin}
+
+%\setbeamercovered{transparent}
+
+}
+
+
+%\mode<handout>
+%{
+%\usepackage{pgfpages}
+%\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=5mm]
+%}
+
+
+\usetheme{Montpellier}
+%\usecolortheme{beetle}
+%\usecolortheme{seagull}
+\usecolortheme{lily}
+
+\title[Lecture 6]{Introduction to statistics: Linear mixed models}
+
+\author{Shravan Vasishth}
+
+\institute{Universit\"at Potsdam\\
+vasishth@uni-potsdam.de\\
+http://www.ling.uni-potsdam.de/$\sim$vasishth
+}
+
+\date{\today}
+
+\addtobeamertemplate{navigation symbols}{}{ \hspace{1em}    \usebeamerfont{footline}%
+    \insertframenumber / \inserttotalframenumber }
+
+\begin{document}
+\maketitle
+
+
+
+<<setup,include=FALSE,cache=FALSE>>=
+library(knitr)
+library(coda)
+
+# set global chunk options, put figures into folder
+options(replace.assign=TRUE,show.signif.stars=FALSE)
+opts_chunk$set(fig.path='figures/figure-', fig.align='center', fig.show='hold')
+options(replace.assign=TRUE,width=75)
+opts_chunk$set(dev='postscript')
+#library(rstan)
+#set.seed(9991)
+# save workspace image, if you want
+#the.date <- format(Sys.time(), "%b%d%Y")
+#save.image(file=paste0("homework01-",the.date,".RData")
+@
+
+
+
+\section{The story so far}
+
+\begin{frame}[fragile]\frametitle{Summary}
+\begin{enumerate}
+\item We know how to do simple t-tests.
+\item We know how to fit simple linear models.
+\item We saw that the paired t-test is identical to the varying intercepts linear mixed model.
+\end{enumerate}
+
+Now we are ready to look at linear mixed models in detail.
+
+\end{frame}
+
+
+\section{Linear mixed models}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+Returning to our SR/OR relative clause data from English (Grodner and Gibson, Expt 1). First we load the data as usual (not shown).
+
+<<>>=
+gge1crit<-read.table("data/grodnergibson05data.txt",
+                     header=TRUE)
+
+gge1crit$so<-ifelse(gge1crit$condition=="objgap",1,-1)
+
+dat<- gge1crit
+dat$logrt<-log(dat$rawRT)
+
+bysubj<-aggregate(logrt~subject+condition,
+                  mean,data=dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+The simple linear model (incorrect for these data):
+<<>>=
+summary(m0<-lm(logrt~so,dat))$coefficients
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+We can visualize the different responses of subjects (four subjects shown):
+
+<<echo=FALSE,include=FALSE,messages=FALSE>>=
+library(ggplot2)
+gg_xyplot <- function(x, y, formula, shape, size, data){
+    ggplot(data = data, aes(x = data[,x],
+                            y = data[,y]))  +
+    facet_wrap(formula) +
+    geom_smooth(method="lm")+
+    geom_point(color = "blue", shape = shape, size = size) +
+    theme(panel.grid.minor = element_blank()) +
+    theme_bw() +
+#     scale_x_discrete(breaks=c("-1","0.5","0","0.5","1"),labels=c("OR","", "", "", "SR"))+
+     scale_x_continuous(breaks = round(seq(-1, 1, by = 2),1))+ 
+    ylab(y) +
+    xlab("condition (-1: SR, +1: OR)")
+}
+@
+
+<<echo=FALSE,fig.height=4>>=
+gg_xyplot(x = "so", y = "logrt",  ~ subject,  
+          shape = 1, size = 3, 
+          data = subset(dat,subject%in%c(1,28,37,38)))
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+Given these differences between subjects, you could fit a separate linear model for each subject, collect together the intercepts and slopes for each subject, and then check if the intercepts and slopes are significantly different from zero.
+
+\textbf{We will fit the model using log reading times because we want to make sure we satisfy model assumptions (e.g., normality of residuals).}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+There is a function in the package \texttt{lme4} that computes separate linear models for each subject: \texttt{lmList}.
+
+<<>>=
+library(lme4)
+
+lmlist.fm1<-lmList(logrt~so|subject,dat)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+Intercept and slope estimates for three subjects:
+
+<<>>=
+lmlist.fm1$`1`$coefficients
+lmlist.fm1$`28`$coefficients
+lmlist.fm1$`37`$coefficients
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+One can plot the individual lines for each subject, as well as the linear model m0's line (this shows how each subject deviates in intercept and slope from the model m0's intercept and slopes).
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+<<echo=FALSE,fig.height=5>>=
+plot(dat$so,
+     dat$logrt,
+     axes=F,
+     xlab="condition",
+     ylab="log rt")
+axis(1,at=c(-1,1),
+     labels=c("SR","OR"))
+axis(2)
+
+subjects<-1:42
+
+for(i in subjects){
+abline(lmlist.fm1[[i]])
+}
+
+abline(lm(dat$logrt~dat$so),lwd=3,col="red")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+To find out if there is an effect of RC type, you can simply check whether the slopes of the individual subjects' fitted lines taken together are significantly different from zero.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+<<>>=
+t.test(coef(lmlist.fm1)[2])
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+The above test is exactly the same as the paired t-test and the varying intercepts linear mixed model \textbf{on aggregated data}:
+
+<<>>=
+t.test(logrt~condition,bysubj,paired=TRUE)$statistic
+
+## also compare with linear mixed model:
+summary(lmer(logrt~condition+(1|subject),
+             bysubj))$coefficients[2,]
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear models}
+
+\begin{itemize}
+\item
+The above lmList model we fit is called \textbf{repeated measures regression}. We now look at how to model unaggregated data using the linear mixed model.
+\item
+This model is now only of historical interest, and useful only for understanding the linear mixed model, which is the modern standard approach.
+\end{itemize}
+\end{frame}
+
+
+\subsection{Model type 1: Varying intercepts models}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+\begin{itemize}
+\item
+The \textbf{linear mixed model} does something related to the above by-subject fits, but with some crucial twists, as we see below. 
+\item
+In the model shown in the next slide,  
+the statement 
+
+(1$\mid$subject) 
+
+adjusts the grand mean estimates of the intercept by a term (a number) for each subject.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+\textbf{Notice that we did not aggregate the data here.}
+
+<<>>=
+m0.lmer<-lmer(logrt~so+(1|subject),dat)
+@
+
+Abbreviated output:
+
+\begin{verbatim}
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ subject  (Intercept) 0.09983  0.3160  
+ Residual             0.14618  0.3823  
+Number of obs: 672, groups:  subject, 42
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)  5.88306    0.05094 115.497
+so           0.06202    0.01475   4.205
+\end{verbatim}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+One thing to notice is that the coefficients (intercept and slope) of the fixed effects of the above model are identical to those in the linear model m0 above. 
+
+The varying intercepts for each subject can be viewed by typing:
+
+<<>>=
+ranef(m0.lmer)$subject[,1][1:10]
+@
+
+
+\end{frame}
+
+
+
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+Here is another way to summarize the adjustments to the grand mean intercept by subject. The error bars represent 95\% confidence intervals.
+
+<<eval=FALSE>>=
+library(lattice)
+print(dotplot(ranef(m0.lmer,condVar=TRUE)))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+%\begin{center}
+%\includegraphics[height=6cm,width=6cm]{figure/caterpillarplot}
+%\end{center}
+
+<<echo=FALSE,fig.height=4>>=
+library(lattice)
+print(dotplot(ranef(m0.lmer,condVar=TRUE)))
+@
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+The model m0.lmer above prints out the following type of linear model.  i indexes subject, and j indexes items. 
+
+Once we know the subject id and the item id, we know which subject saw which condition:
+
+<<>>=
+subset(dat,subject==1 & item == 1)
+@
+
+
+\begin{equation}
+y_{ij} = \beta_0 + u_{0i}+\beta_1\times so_{ij} + \epsilon_{ij}
+\end{equation}
+
+The \textbf{only} new thing here is the by-subject adjustment to the intercept.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+\begin{itemize}
+\item
+Note that these by-subject adjustments to the intercept $u_{0i}$ are assumed by lmer to come from a normal distribution centered around 0: 
+
+$u_{0i} \sim Normal(0,\sigma_{u0})$
+\item
+The ordinary linear model m0 has one intercept $\beta_0$ for all subjects, whereas the linear mixed model with varying intercepts m0.lmer has a different intercept ($\beta_0 + u_{0i}$) for each subject $i$.
+\item
+We can visualize the adjustments for each subject to the intercepts as shown below.
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+<<echo=FALSE,fig.height=5>>=
+a<-fixef(m0.lmer)[1]
+newa<-a+ranef(m0.lmer)$subj
+
+ab<-data.frame(newa=newa,b=fixef(m0.lmer)[2])
+
+plot(dat$so,dat$logrt,xlab="condition",ylab="log rt",axes=F)
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+
+for(i in 1:42){
+abline(a=ab[i,1],b=ab[i,2])
+}
+
+abline(lm(logrt~so,dat),lwd=3,col="red")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Formal statement of varying intercepts linear mixed model}
+
+i indexes subjects, j items.
+
+\begin{equation}
+y_{ij} = \beta_0 + u_{0i}+\beta_1\times so_{ij} + \epsilon_{ij}
+\end{equation}
+
+Variance components:
+
+\begin{itemize}
+\item
+$u_0 \sim Normal(0,\sigma_{u0})$
+\item
+$\epsilon \sim Normal(0,\sigma)$
+\end{itemize}
+
+\end{frame}
+
+
+\subsection{Model type 2: Varying intercepts and slopes model (no correlation)}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+Note that, unlike the figure associated with the lmlist.fm1 model above, which also involves fitting separate models for each subject, the model m0.lmer assumes \textbf{different intercepts} for each subject \textbf{but the same slope}. 
+
+We can have lmer fit different intercepts AND slopes for each subject.
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+\framesubtitle{Varying intercepts and slopes by subject}
+
+We assume now that each subject's slope is also adjusted:
+
+\begin{equation}
+y_{ij} = \beta_0 + u_{0i}+(\beta_1+u_{1i})\times so_{ij} + \epsilon_{ij}
+\end{equation}
+
+That is, we additionally assume that $u_{1i} \sim Normal(0,\sigma_{u1})$.
+
+<<>>=
+m1.lmer<-lmer(logrt~so+(1+so||subject),dat)
+@
+
+\begin{verbatim}
+Random effects:
+ Groups    Name        Variance Std.Dev.
+ subject   (Intercept) 0.1006   0.317   
+ subject.1 so          0.0121   0.110   
+ Residual              0.1336   0.365   
+Number of obs: 672, groups:  subject, 42
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.8831     0.0509  115.50
+so            0.0620     0.0221    2.81
+\end{verbatim}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+These fits for each subject are visualized below (the red line shows the model with a single intercept and slope, i.e., our old model m0):
+
+<<echo=FALSE,fig.height=4>>=
+a<-fixef(m1.lmer)[1]
+b<-fixef(m1.lmer)[2]
+
+newa<-a+ranef(m1.lmer)$subject[1]
+newb<-b+ranef(m1.lmer)$subject[2]
+
+ab<-data.frame(newa=newa,b=newb)
+
+plot(dat$so,dat$logrt,xlab="condition",
+     ylab="log rt",axes=F,
+main="varying intercepts and slopes for each subject")
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+
+for(i in 1:42){
+abline(a=ab[i,1],b=ab[i,2])
+}
+
+abline(lm(logrt~so,dat),lwd=3,col="red")
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+\framesubtitle{Comparing lmList model with varying intercepts model}
+
+Compare this model with the lmlist.fm1 model we fitted earlier:
+
+<<echo=FALSE,fig.height=4>>=
+op<-par(mfrow=c(1,2),pty="s")
+
+plot(dat$so,dat$logrt,axes=F,xlab="condition",
+     ylab="log rt",main="ordinary linear model")
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+
+subjects<-1:42
+
+lmlistcoef<-coef(lmlist.fm1)
+a_lmlist<-lmlistcoef$`(Intercept)`
+b_lmlist<-lmlistcoef$so
+
+for(i in subjects){
+abline(a=a_lmlist[i],b=b_lmlist[i])
+}
+
+abline(lm(logrt~so,dat),lwd=3,col="red")
+
+a<-fixef(m1.lmer)[1]
+b<-fixef(m1.lmer)[2]
+
+newa<-a+ranef(m1.lmer)$subj[1]
+newb<-b+ranef(m1.lmer)$subj[2]
+
+ab<-data.frame(newa=newa,b=newb)
+
+plot(dat$so,dat$logrt,axes=F,
+main="varying intercepts and slopes",
+xlab="condition",ylab="log rt")
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+
+for(i in 1:42){
+abline(a=ab[i,1],b=ab[i,2])
+}
+
+abline(lm(logrt~so,dat),lwd=3,col="red")
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+<<eval=FALSE>>=
+print(dotplot(ranef(m1.lmer,condVar=TRUE)))
+@
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+
+<<echo=FALSE,fig.height=4>>=
+print(dotplot(ranef(m1.lmer,condVar=TRUE)))
+@
+
+%\begin{center}
+%\includegraphics[height=7cm]{figure/caterpillarplot2}
+%\end{center}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Formal statement of varying intercepts and varying slopes linear mixed model}
+
+i indexes subjects, j items.
+
+\begin{equation}
+y_{ij} = \beta_0 + u_{0i}+\beta_1\times so_{ij} + \epsilon_{ij}
+\end{equation}
+
+Variance components:
+
+\begin{itemize}
+\item
+$u_0 \sim Normal(0,\sigma_{u0})$
+\item
+$u_1 \sim Normal(0,\sigma_{u1})$
+\item
+$\epsilon \sim Normal(0,\sigma)$
+\end{itemize}
+
+\end{frame}
+
+
+\subsection{Shrinkage in linear mixed models}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+
+\begin{itemize}
+\item
+The estimate of the effect by participant is smaller than when we fit a separate linear model to the subject's data. 
+\item
+This is called shrinkage in linear mixed models: the individual level estimates are shunk towards the mean slope.
+\item
+The less data we have from a given subject, the more the shrinkage.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+
+<<echo=FALSE,fig.height=5>>=
+op<-par(mfrow=c(1,3),pty="s")
+coefs<-coef(lmlist.fm1)
+intercepts<-coefs[1]
+colnames(intercepts)<-"intercept"
+slopes<-coefs[2]
+
+plot(jitter(dat$so,.5),
+        dat$logrt,axes=FALSE,
+        xlab="Condition",ylab="rt (log ms)",
+        main="Subject 28's estimates")
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+## no pooling estimate:
+abline(intercepts$intercept[28],slopes$so[28])
+## partial pooling
+u<-ranef(m1.lmer)$subject
+u0<-u$`(Intercept)`
+u1<-u$so
+b0<-summary(m1.lmer)$coefficients[1,1]
+b1<-summary(m1.lmer)$coefficients[2,1]
+
+abline(b0+u0[28],b1+u1[28],lty=2)
+## complete pooling:
+abline(lm(log(rawRT)~so,dat),lwd=3,col="red")
+
+plot(jitter(dat$so,.5),
+        log(dat$rawRT),axes=FALSE,
+        xlab="Condition",ylab="rt (log ms)",
+        main="Subject 36's estimates")
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+
+## no pooling estimate:
+abline(intercepts$intercept[36],slopes$so[36])
+## partial pooling:
+abline(b0+u0[36],b1+u1[36],lty=2)
+## complete pooling:
+abline(lm(log(rawRT)~so,dat),lwd=3,col="red")
+
+plot(jitter(dat$so,.5),
+        log(dat$rawRT),axes=FALSE,
+        xlab="Condition",ylab="rt (log ms)",
+        main="Subject 37's estimates")
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+## no pooling estimate:
+abline(intercepts$intercept[37],slopes$so[37])
+## partial pooling:
+abline(b0+u0[37],b1+u1[37],lty=2)
+## complete pooling:
+abline(lm(log(rawRT)~so,dat),lwd=3,col="red")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+Let's randomly delete some data from one subject:
+<<>>=
+set.seed(4321)
+## choose some data randomly to remove:
+rand<-rbinom(1,n=16,prob=0.5)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+<<>>=
+dat[which(dat$subject==37),]$rawRT
+dat$deletedRT<-dat$rawRT
+dat[which(dat$subject==37),]$deletedRT<-ifelse(rand,NA,dat[which(dat$subject==37),]$rawRT)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+Now subject 37's estimates are going to be pretty wild:
+
+<<>>=
+subset(dat,subject==37)$deletedRT
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+<<>>=
+## original no pooling estimate:
+lmList.fm1_old<-lmList(log(rawRT)~so|subject,dat)
+coefs_old<-coef(lmList.fm1_old)
+intercepts_old<-coefs_old[1]
+colnames(intercepts_old)<-"intercept"
+slopes_old<-coefs_old[2]
+## subject 37's original estimates:
+intercepts_old$intercept[37]
+slopes_old$so[37]
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+<<>>=
+## on deleted data:
+lmList.fm1_deleted<-lmList(log(deletedRT)~so|subject,dat)
+coefs<-coef(lmList.fm1_deleted)
+intercepts<-coefs[1]
+colnames(intercepts)<-"intercept"
+slopes<-coefs[2]
+## subject 37's new estimates on deleted data:
+intercepts$intercept[37]
+slopes$so[37]
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+%Now fit the hierarchical model and examine subject 37's estimates on undeleted vs deleted data:
+
+<<echo=FALSE,fig.height=5>>=
+plot(jitter(dat$so,.5),
+        log(dat$rawRT),axes=FALSE,
+        xlab="Condition",ylab="rt (log ms)",
+        main="Subject 37's estimates",ylim=c(4.5,9))
+axis(1,at=c(-1,1),labels=c("SR","OR"))
+axis(2)
+
+## deleted data estimate lmList:
+abline(intercepts$intercept[37],slopes$so[37])
+## original data estimate lmList:
+abline(intercepts_old$intercept[37],slopes_old$so[37],lwd=4)
+
+## partial pooling, original data:
+u0_old<-u0
+u1_old<-u1
+b0_old<-b0
+b1_old<-b1
+
+m1.lmer_deleteddata<-lmer(log(deletedRT)~so + (1+so||subject),dat)
+b0<-summary(m1.lmer_deleteddata)$coefficients[1,1]
+b1<-summary(m1.lmer_deleteddata)$coefficients[2,1]
+u<-ranef(m1.lmer_deleteddata)$subject
+u0<-u$`(Intercept)`
+u1<-u$`so`
+
+## LMM on deleted data:
+abline(b0+u0[37],b1+u1[37],lty=2,col="red",lwd=1)
+## LMM on original data:
+abline(b0_old+u0_old[37],b1_old+u1_old[37],lty=2,col="red",lwd=3)
+
+## complete pooling:
+abline(lm(log(rawRT)~so,dat),lwd=3,col="orange")
+
+legend(x=-1,y=9,
+       lty=c(1,1,2,2,1),
+       lwd=c(1,4,1,2,3),
+       col=c("black","black","red","red","orange"),
+       legend=c("lmList (no pooling) deleted data",
+                "lmList (no pooling) original data",
+                "lmer (partial pooling) deleted data",
+                "lmer (partial pooling) original data",
+                "linear model (complete pooling) original data"))
+
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
+\framesubtitle{The effect of missing data on estimation in LMMs}
+
+\begin{itemize}
+\item
+What we see here is that the estimates from the hierarchical model are barely affected by the missingness, but the estimates from the no-pooling model are heavily affected.
+\item
+This means that linear mixed models will give you more robust estimates (think Type M error!) compared to no pooling models.
+\item
+This is one reason why linear mixed models are such a big deal. 
+\end{itemize}
+
+\end{frame}
+
+\subsection{Varying intercepts and slopes model, with crossed random effects for subjects and for items}
+
+\begin{frame}[fragile]\frametitle{Crossed subjects and items in LMMs}
+
+Subjects and items are fully crossed:
+
+<<>>=
+head(xtabs(~subject+item,dat))
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+Linear mixed model with crossed subject and items random effects.
+
+<<>>=
+m2.lmer<-lmer(logrt~so+(1+so||subject)+(1+so||item),dat)
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+\begin{verbatim}
+Random effects:
+ Groups    Name        Variance Std.Dev.
+ subject   (Intercept) 0.10090  0.3177  
+ subject.1 so          0.01224  0.1106  
+ item      (Intercept) 0.00127  0.0356  
+ item.1    so          0.00162  0.0402  
+ Residual              0.13063  0.3614  
+Number of obs: 672, groups:  subject, 42; item, 16
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.8831     0.0517  113.72
+so            0.0620     0.0242    2.56
+\end{verbatim}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+<<echo=FALSE,fig.height=4>>=
+print(dotplot(ranef(m2.lmer,condVar=TRUE))$subject)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+<<echo=FALSE,fig.height=4>>=
+print(dotplot(ranef(m2.lmer,condVar=TRUE))$item)
+@
+
+\end{frame}
+
+\subsection{Model type 3: Varying intercepts and varying slopes, with correlation}
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+Linear mixed model with crossed subject and items random effects.
+
+<<>>=
+m3.lmer<-lmer(logrt~so+(1+so|subject)+(1+so|item),
+              dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+Linear mixed model with crossed subject and items random effects.
+
+\begin{verbatim}
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr
+ subject  (Intercept) 0.10103  0.3178       
+          so          0.01228  0.1108   0.58
+ item     (Intercept) 0.00172  0.0415       
+          so          0.00196  0.0443   1.00 <= degenerate
+ Residual             0.12984  0.3603       
+Number of obs: 672, groups:  subject, 42; item, 16
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.8831     0.0520  113.09
+so            0.0620     0.0247    2.51
+\end{verbatim}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Formal statement of varying intercepts and varying slopes linear mixed model with correlation}
+
+i indexes subjects, j items.
+
+\begin{equation}
+y_{ij} = \alpha + u_{0i} + w_{0j} + (\beta + u_{1i} + w_{1j}) * so_{ij} + \varepsilon_{ij}
+\end{equation}
+
+where $\varepsilon_{ij} \sim Normal(0,\sigma)$ and 
+
+\begin{equation}\label{eq:covmat2}
+\Sigma _u
+=
+\begin{pmatrix}
+\sigma _{u0}^2  & \rho _{u}\sigma _{u0}\sigma _{u1}\\
+\rho _{u}\sigma _{u0}\sigma _{u1}    & \sigma _{u1}^2\\
+\end{pmatrix}
+\quad 
+\Sigma _w
+=
+\begin{pmatrix}
+\sigma _{w0}^2  & \rho _{w}\sigma _{w0}\sigma _{w1}\\
+\rho _{w}\sigma _{w0}\sigma _{w1}    & \sigma _{w1}^2\\
+\end{pmatrix}
+\end{equation}
+
+\begin{equation}\label{eq:jointpriordist2}
+\begin{pmatrix}
+  u_0 \\ 
+  u_1 \\
+\end{pmatrix}
+\sim 
+\mathcal{N} \left(
+\begin{pmatrix}
+  0 \\
+  0 \\
+\end{pmatrix},
+\Sigma_{u}
+\right),
+\quad
+\begin{pmatrix}
+  w_0 \\ 
+  w_1 \\
+\end{pmatrix}
+\sim 
+\mathcal{N}\left(
+\begin{pmatrix}
+  0 \\
+  0 \\
+\end{pmatrix},
+\Sigma_{w}
+\right)
+\end{equation}
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+
+<<echo=FALSE,fig.height=4>>=
+print(dotplot(ranef(m3.lmer,condVar=TRUE))$subject)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Visualizing random effects}
+\framesubtitle{These are degenerate estimates}
+
+<<echo=FALSE,fig.height=4>>=
+print(dotplot(ranef(m3.lmer,condVar=TRUE))$item)
+@
+
+\end{frame}
+
+
+
+\end{document}

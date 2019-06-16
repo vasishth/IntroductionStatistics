@@ -1,0 +1,561 @@
+\documentclass[slidestop,compress,mathserif,red]{beamer}
+%\documentclass[handout]{beamer}
+
+%\usepackage{beamerthemesplit}
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{gb4e}
+\usepackage{qtree}
+\usepackage{hyperref}
+\usepackage{ulem}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+\setbeamerfont{page number in head/foot}{size=\large}
+\setbeamertemplate{footline}[frame number]
+
+%\setbeamertemplate{footline}%
+%{%
+%\hfill\insertpagenumber\ of \ref{TotPages}\hspace{.5cm}\vspace{.5cm}
+%\hfill\insertpagenumber\ of 28\hspace{.5cm}\vspace{.5cm}
+%}%
+
+
+
+\mode<presentation>
+{
+%\usetheme{Singapore}
+%\usetheme{Berlin}
+
+%\setbeamercovered{transparent}
+
+}
+
+
+%\mode<handout>
+%{
+%\usepackage{pgfpages}
+%\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=5mm]
+%}
+
+\usetheme{Montpellier}
+%\usecolortheme{beetle}
+%\usecolortheme{seagull}
+\usecolortheme{lily}
+
+\title[Lecture 3]{Important note on t-tests}
+
+\author{Shravan Vasishth}
+
+\institute{Universit\"at Potsdam\\
+vasishth@uni-potsdam.de\\
+http://www.ling.uni-potsdam.de/$\sim$vasishth
+}
+
+\date{\today}
+
+\addtobeamertemplate{navigation symbols}{}{ \hspace{1em}    \usebeamerfont{footline}%
+    \insertframenumber / \inserttotalframenumber }
+
+\begin{document}
+\maketitle
+
+\begin{frame}\frametitle{Some important topics regarding the t-test}
+
+In this lecture, I will discuss the following important topics:
+
+\begin{itemize}
+\item Two-sample t-tests
+\item paired t-tests
+\item independent vs repeated measures data
+\item by-subjects and by-items analyses
+\end{itemize}
+
+\end{frame}
+
+\section{Two sample and paired t-tests}
+
+\subsection{Reminder about one-sample t-tests}
+
+\begin{frame}[fragile]\frametitle{t-test}
+
+These are the heights of students in one of my classes at Potsdam:
+  
+  <<>>=
+  heights <- c(173,174,160,157,158,170,172,170,
+               175,168,165,170,173,180,168,162,
+               180,160,155,163,173,175,176,172,
+               160,161,150,170,165,184,165)
+@
+  
+  We can do a t-test to evaluate the null hypothesis that $H_0: \mu = 170$ cm.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The t-distribution}
+
+The formal definition of the t-distribution is as follows:
+  
+  Suppose we have a random sample of size $n$, say of heights, which come from a $Normal(\mu,\sigma)$ distribution. Then the quantity 
+
+$T=\frac{\overline{X}-\mu}{S/\sqrt{n}}$
+  
+  has a $\mathsf{t}(\mathtt{df}=n-1)$ sampling distribution. The distribution is defined as ($r$ is degrees of freedom):
+  
+  $
+  f_{X}(x,r)=\frac{\Gamma[(r+1)/2]}{\sqrt{r\pi}\ \Gamma(r/2)}\left(1+\frac{x^{2}}{r}\right)^{-(r+1)/2},\quad -\infty < x < \infty.
+$
+  
+  [$\Gamma$ refers to the gamma function; in this course we can ignore what this is, but read Kerns if you are interested.]
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The t-test}
+
+<<>>=
+  t.test(heights,mu=170)
+@
+  
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Computing the p-value by hand}
+
+First, we compute the absolute observed $t=\frac{\bar{x}-\mu}{s/\sqrt{n}}$:
+  
+<<>>=
+(obs_t<-abs((mean(heights)-170)/(sd(heights)/sqrt(31))))
+@
+  
+Then we compute the probability of seeing that absolute observed t or something more extreme, assuming the null is true:
+  
+<<>>=
+2*pt(-obs_t,df=30)
+@
+  
+%Notice that for n=31, we could have used the normal distribution:
+  
+<<eval=FALSE,echo=FALSE>>=
+2*(pnorm(mean(heights),mean=170,sd=sd(heights)/sqrt(30)))
+@
+  
+\end{frame}
+
+\subsection{The two-sample t-test}
+
+\begin{frame}[fragile]\frametitle{Two-sample t-test}
+
+This is a data-set from Keith Johnson's book (Quantitative Methods in Linguistics):
+
+<<>>=
+F1data<-read.table("data/F1_data.txt",header=TRUE)
+head(F1data)
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Two-sample t-test}
+
+Notice that the male and female values are paired in the sense that they are for the same vowel and language.
+
+We can compare males and females' F1 frequencies, ignoring the fact that the data are paired.
+
+Now, our null hypothesis is $H_0: \mu_m = \mu_f$ or $H_0: \mu_m - \mu_f = \delta = 0$.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-sample t-test}
+\framesubtitle{Assuming equal variance between men and women}
+
+<<>>=
+  t.test(F1data$female,F1data$male,var.equal=TRUE)
+@
+  
+  \end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Two-sample t-test}
+
+Doing this ``by hand'': The only new thing is the SE calculation, and the the df for t-distribution $(2\times n - 2)=36$.
+
+$SE_\delta 
+= \sqrt{\frac{\sigma_1^2}{n_1} + \frac{\sigma_2^2}{n_2}}$
+  
+  <<>>=
+  d<-mean(F1data$female)-mean(F1data$male)
+(SE<-sqrt(var(F1data$male)/19+var(F1data$female)/19))
+observed_t <- (d-0)/SE
+2*(1-pt(observed_t,df=36))
+@
+  
+  \end{frame}
+
+\subsection{The paired t-test}
+
+\begin{frame}[fragile]\frametitle{The paired t-test}
+
+But this data analysis was incorrect.
+
+This data are paired: each row has 
+F1 measurements from a male and female for the \textbf{same vowel and language}.
+
+For paired data,  $H_0: \delta=0$ as before. But since each row in the data-frame is paired (from the same vowel+language), we subtract row-wise, and get a new vector d with the pairwise differences.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The paired t-test}
+
+Then, we just do a one-sample test:
+  
+<<>>=
+diff<-F1data$female-F1data$male
+t.test(diff)
+t.test(F1data$female,F1data$male,paired=TRUE)
+@
+  
+  Notice that the p-value is now ``statistically significant''.
+This is because the SE is much smaller:
+  
+  <<>>=
+  (SE<-sqrt(var(diff)/19))
+(observed_t <- (mean(d)-0)/SE)
+2*(1-pt(observed_t,df=18))
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{Summary so far}
+
+We have worked through the
+
+\begin{enumerate}
+\item One sample t-test
+\item Two sample t-test
+\item Paired t-test
+\end{enumerate}
+
+\end{frame}
+
+
+\subsection{An often-seen mistake in paired t-tests}
+
+\begin{frame}[fragile]\frametitle{A note on paired t-tests}
+
+
+Note that each row of the data frame cannot have more than one row for a particular pair. 
+
+For example, doing a paired t-test on this frame would be incorrect:
+  
+  \begin{table}[ht]
+\centering
+\begin{tabular}{rrrll}
+\hline
+female & male & vowel & language \\ 
+\hline
+391 & 339 & i & W.Apache \\ 
+400 & 320 & i & W.Apache \\ 
+\vdots & \vdots & \vdots & \vdots\\
+\hline
+\end{tabular}
+\end{table}
+
+Why? Because the assumption is that each row is independent of the others. This assumption is violated here.
+
+%[In fact, it is arguable whether we can assume that rows containing the same vowel in different languages gives us independence.]
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{A note on paired t-tests}
+
+Note that each row of the data frame cannot have more than one row for a particular pair. 
+
+Another example:
+  
+  \begin{table}[ht]
+\centering
+\begin{tabular}{rrrll}
+\hline
+cond\_a & cond\_b & subject & item \\ 
+\hline
+391 & 339 & 1 & 1 \\ 
+400 & 320 & 1 & 2 \\ 
+\vdots & \vdots & \vdots & \vdots\\
+\hline
+\end{tabular}
+\end{table}
+
+Here, we have repeated measures from subject 1. The independence assumption is violated.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{A note on paired t-tests}
+
+\begin{enumerate}
+\item
+What to do when we have repeated measurements from each subject or each item?
+  \item
+We aggregate the data so that each subject (or item) has only one value for each condition.
+\item
+This has a drawback: it pretends we have one measurement from each subject for each condition.
+\item
+Later on we will learn how to analyze unaggregated data.
+\end{enumerate}
+
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Example of INCORRECT pair-wise t-test}
+
+We have repeated measures data on noun pronunciation durations, in seconds.
+
+\textbf{These data are in so-called wide form.}
+  
+  <<>>=
+  dataN2<-read.table("data/dataN2.txt",header=T)
+head(dataN2)
+
+xtabs(~Sentence+Speaker_id,dataN2)
+@
+  
+  \end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Example of INCORRECT pair-wise t-test}
+
+<<>>=
+  ## significant effect:
+  with(dataN2,
+       t.test(N2_dur.2,N2_dur.1,paired=TRUE))
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{Example of INCORRECT pair-wise t-test}
+
+\begin{itemize}
+\item 
+The above t-test was incorrect because we have multiple rows of (dependent) data from the same subject.
+\item
+We need to aggregate the multiple measurements from each subject until we have one data point from each subject for each combination of vowel and language.
+\end{itemize}
+
+\textbf{How to figure out if we have repeated measures data?} We turn to this question next.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{CORRECT pair-wise t-test}
+
+Our data are in \textbf{wide form}.
+
+First, convert data to \textbf{long form}:
+  
+  <<>>=
+  N2dur1data<-data.frame(item=dataN2$Sentence,
+                         subj=dataN2$Speaker_id,
+                         cond="a",
+                         dur=dataN2$N2_dur.1)
+N2dur2data<-data.frame(item=dataN2$Sentence,
+                       subj=dataN2$Speaker_id,
+                       cond="b",
+                       dur=dataN2$N2_dur.2)
+
+N2data<-rbind(N2dur1data,N2dur2data)
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{CORRECT pair-wise t-test}
+
+<<>>=
+write.table(N2data,file="N2data.txt")
+  head(N2data)
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{CORRECT pair-wise t-test}
+
+Now we can easily check that we have repeated measures by subject for each condition:
+
+<<>>=
+xtabs(~subj+cond,N2data)
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{CORRECT pair-wise t-test}
+
+Notice that we can also easily check that we have repeated measures by \textbf{item} for each condition:
+
+<<>>=
+xtabs(~item+cond,N2data)
+@
+  
+  \end{frame}
+
+
+\begin{frame}[fragile]\frametitle{CORRECT pair-wise t-test}
+
+Then aggregate so that we have \textbf{only one data point per subject for each condition}:
+  
+  <<>>=
+  N2data_bysubj<-aggregate(dur~subj+cond,mean,
+                           data=N2data)
+@
+
+Check that we have one data point for each subject in each condition:
+
+<<>>=
+head(xtabs(~subj+cond,N2data_bysubj),n=2)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{CORRECT pair-wise t-test}
+
+
+Compare with the unaggregated data:
+
+<<>>=
+head(xtabs(~subj+cond,N2data),n=2)
+@
+  
+  \end{frame}
+
+
+
+
+\begin{frame}[fragile]\frametitle{Example of CORRECT pair-wise t-test (by subject)}
+
+Create a vector for each condition:
+  
+<<>>=
+conda<-subset(N2data_bysubj,cond=="a")
+condb<-subset(N2data_bysubj,cond=="b")
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{Example of CORRECT pair-wise t-test (by subject)}
+\framesubtitle{Notice that the result is no longer significant}
+
+<<>>=
+  ## not significant:
+t.test(condb$dur,conda$dur,paired=TRUE)
+@
+
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{Example of CORRECT pair-wise t-test (by subj)}
+
+Alternative syntax:
+  
+  <<>>=
+  ## alternative syntax:
+  t.test(dur~cond,paired=TRUE,N2data_bysubj)
+@
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{Example of CORRECT pair-wise t-test (by subj)}
+
+\begin{itemize}
+\item
+There are many published papers in linguistics and psychology in which the data analysis ignores model assumptions and reports incorrect p-values.
+
+\item
+Some recent examples are reported in:
+
+Bruno Nicenboim, Timo B. Roettger, and Shravan Vasishth. Using meta-analysis for evidence synthesis: The case of incomplete neutralization in German. Journal of Phonetics, 70:39-55, 2018.
+\end{itemize}
+
+  \end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Class activity: Do a by items paired t-test}
+
+Given these data (download from moodle):
+
+<<>>=
+  head(N2data,n=2)
+@
+
+Do a by-items t-test.  
+  
+\end{frame}
+
+
+\end{document}
+
+\begin{frame}[fragile]\frametitle{Exercise: Do a by items paired t-test}
+
+<<>>=
+  ## STEP 1: Aggregate over items:
+  #N2data_byitem<-aggregate(dur~item+cond,mean,
+  #               data=N2data)
+  @
+  
+  \end{frame}
+
+\begin{frame}[fragile]\frametitle{Exercise: Do a by items paired t-test}
+
+<<>>=
+  ## STEP 2: Create a vector for condition a and b:
+  #conda<-subset(N2data_byitem,cond=="a")
+  #condb<-subset(N2data_byitem,cond=="b")
+  #conda<-...
+  #condb<-...
+  ## Do a by items paired t-test:
+  #t.test(condb$dur,conda$dur,paired=TRUE)
+  @
+  \end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Some cautionary notes about the p-value}
+
+The p-value is widely misunderstood, even by veteran scientists. 
+
+Here are some things people \textbf{incorrectly} think is true of p-values:
+  
+  \medskip
+
+\textbf{Mistake}: A lower p-value gives me more confidence in the specific alternative hypothesis I am interested in verifying.
+
+In fact, a lower p-value only gives me stronger evidence against the null; it doesn't necessarily give me any more evidence than p=0.05 for my \textbf{specific} favored alternative. 
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Some cautionary notes about the p-value}
+
+\textbf{Mistake}: A p-value greater than 0.05 tells me that the null hypothesis is true.
+
+Psychology and linguistics is littered with invalid claims like these. The issue here is lack of statistical power (to be explained next).
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Some cautionary notes about the p-value}
+
+\textbf{Mistake}: It is widely assumed that if $p<0.05$, we have found out that the alternative is true, i.e., that there is a true effect. 
+
+One can always be wrong, typically we allow  probability 0.05 to be wrong.
+The only currency we will recognize is replicability.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Some cautionary notes about the p-value}
+
+\textbf{Mistake}: It is widely believed that the p-value is the probability of the null hypothesis being true.
+
+The p-value is a \textbf{conditional} probability: the probability of seeing the t-value that you got, or something more extreme, assuming the null is true.
+
+An analogy: If you know that the probability of the streets being wet given that it is raining is 0.99, it does not mean that the probability that it's raining is 0.99.
+
+\end{frame}

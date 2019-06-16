@@ -1,0 +1,668 @@
+\documentclass[slidestop,compress,mathserif,red]{beamer}
+%\documentclass[handout]{beamer}
+
+%\usepackage{beamerthemesplit}
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{gb4e}
+\usepackage{qtree}
+\usepackage{hyperref}
+\usepackage{ulem}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+%\setbeamerfont{page number in head/foot}{size=\large}
+%\setbeamertemplate{footline}[frame number]
+
+%\setbeamertemplate{footline}%
+%{%
+%\hfill\insertpagenumber\ of \ref{TotPages}\hspace{.5cm}\vspace{.5cm}
+%\hfill\insertpagenumber\ of 28\hspace{.5cm}\vspace{.5cm}
+%}%
+
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{normal text}{fg=black}
+
+
+\mode<presentation>
+{
+%\usetheme{Singapore}
+%\usetheme{Berlin}
+
+%\setbeamercovered{transparent}
+
+}
+
+
+%\mode<handout>
+%{
+%\usepackage{pgfpages}
+%\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=5mm]
+%}
+
+\usetheme{Montpellier}
+%\usecolortheme{beetle}
+%\usecolortheme{seagull}
+\usecolortheme{lily}
+
+\title[Lecture 1]{Introduction to statistics: Foundations}
+
+\author{Shravan Vasishth}
+
+\institute{Universit\"at Potsdam\\
+vasishth@uni-potsdam.de\\
+http://www.ling.uni-potsdam.de/$\sim$vasishth
+}
+
+\date{\today}
+
+\addtobeamertemplate{navigation symbols}{}{ \hspace{1em}    \usebeamerfont{footline}%
+    \insertframenumber / \inserttotalframenumber }
+    
+\begin{document}
+
+\maketitle
+
+
+
+<<setup,include=FALSE,cache=FALSE>>=
+library(knitr)
+library(coda)
+
+# set global chunk options, put figures into folder
+options(replace.assign=TRUE,show.signif.stars=FALSE)
+opts_chunk$set(fig.path='figures/figure-', fig.align='center', fig.show='hold')
+options(replace.assign=TRUE,width=75)
+opts_chunk$set(dev='postscript')
+
+@
+
+
+
+\section{Random variables, pdfs, cdfs}
+
+\begin{frame}\frametitle{The definition of a random variable}
+
+A random variable $X$ is a function $X : S \rightarrow \mathbb{R}$ that associates to each outcome
+$\omega \in S$ exactly one number $X(\omega) = x$.
+
+$S_X$ is all the $x$'s (all the possible values of X, the support of X). I.e., $x \in S_X$. 
+
+\textbf{Discrete example}: number of coin tosses till H
+
+\begin{itemize}
+  \item $X: \omega \rightarrow x$
+  \item $\omega$: H, TH, TTH,\dots (infinite)
+  \item $x=0,1,2,\dots; x \in S_X$
+\end{itemize}
+
+We will write $X(\omega)=x$:
+
+$H \rightarrow 1$\newline
+$TH \rightarrow 2$\newline
+$\vdots$
+
+
+%\textbf{Continuous example}: fixation durations in reading
+
+%\begin{itemize}
+%  \item $X: \omega \rightarrow x$
+%  \item $\omega$: 145.21, 352.43, 270, \dots 
+%  \item $x=145.21, 352.43, 270,\dots; x \in S_X$
+%\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}\frametitle{Probability mass/distribution function}
+
+Every discrete random variable X has associated with it a \textbf{probability mass function (PMF)}. Continuous RVs have \textbf{probability distribution functions} (PDFs). We will call both PDFs (for simplicity).
+
+\begin{equation}
+p_X : S_X \rightarrow [0, 1] 
+\end{equation}
+
+defined by
+
+\begin{equation}
+p_X(x) = P(X(\omega) = x), x \in S_X
+ \end{equation}
+
+This pmf tells us the probability of having getting a heads on  1, 2, \dots tosses.
+
+\end{frame}
+
+
+\begin{frame}\frametitle{The cumulative distribution function}
+
+The \textbf{cumulative distribution function} in the discrete case is
+
+\begin{equation}
+F(a)=\sum_{\hbox{all } x \leq a} p(x)
+\end{equation}
+
+%In the continuous case, the cdf is:
+
+%\begin{equation}
+%F(a)=\int_{-\infty}^{a} p(x)\, dx
+%\end{equation}
+
+The cdf tells us the \textit{cumulative} probability of getting a heads in 1 or less tosses; 2 or less tosses,\dots.
+
+It will soon become clear why we need this.
+
+\end{frame}
+
+\subsection{The binomial random variable}
+
+\begin{frame}\frametitle{Discrete example: The binomial random variable}
+
+Suppose that we toss a coin $n=10$ times. There are two possible outcomes, success and failure, each with probability $\theta$ and $(1-\theta)$ respectively. 
+
+Then, 
+the probability of $x$ successes out of $n$ is defined by the pmf:
+
+\begin{equation}
+p_X(x)=P(X=x) = {n \choose x} \theta^x (1-\theta)^{n-x} 
+\end{equation} 
+ 
+[assuming a binomial distribution] 
+ 
+\end{frame}
+
+
+
+\begin{frame}\frametitle{Discrete example: The binomial random variable}
+
+Example: $n=10$ coin tosses.  Let the probability of success be $\theta=0.5$.
+
+We start by asking the question: 
+
+What's the probability of x or fewer successes, where x is some number between 0 and 10? 
+
+Let's compute this. 
+We use the built-in CDF function \texttt{pbinom}.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Discrete example: The binomial random variable}
+
+<<calculatecdfbinomial,include=TRUE,echo=TRUE,cache=TRUE>>=
+## sample size
+n<-10
+## prob of success
+p<-0.5
+probs<-rep(NA,11)
+for(x in 0:10){
+  ## Cumulative Distribution Function:
+probs[x+1]<-round(pbinom(x,size=n,prob=p),digits=2)
+}
+@
+
+<<echo=FALSE>>=
+xtabl.probs<-data.frame(x=0:10,prob=probs)
+@
+
+We have just computed the cdf of this random variable.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Discrete example: The binomial random variable}
+
+% latex table generated in R 3.1.2 by xtable 1.7-4 package
+% Wed Jul 15 07:17:07 2015
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrr}
+  \hline
+ & $P(X\leq x)$ & cumulative probability \\ 
+  \hline
+1 &   0 & 0.00 \\ 
+  2 &   1 & 0.01 \\ 
+  3 &   2 & 0.05 \\ 
+  4 &   3 & 0.17 \\ 
+  5 &   4 & 0.38 \\ 
+  6 &   5 & 0.62 \\ 
+  7 &   6 & 0.83 \\ 
+  8 &   7 & 0.95 \\ 
+  9 &   8 & 0.99 \\ 
+  10 &   9 & 1.00 \\ 
+  11 &  10 & 1.00 \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Discrete example: The binomial random variable}
+
+<<cdfbinomial,include=TRUE,echo=TRUE,cache=TRUE,fig.width=4,fig.height=3,out.width='0.75\\textwidth'>>=
+## Plot the CDF:
+plot(1:11,probs,xaxt="n",xlab="x",
+     ylab=expression(P(X<=x)),main="CDF")
+axis(1,at=1:11,labels=0:10)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Discrete example: The binomial random variable}
+
+Another question we can ask involves the pmf: 
+What is the probability of getting exactly x successes? For example, if x=1,  we want P(X=1).
+
+We can get the answer from (a) the cdf, or (b) the pmf:
+
+<<>>=
+## using cdf:
+pbinom(1,size=10,prob=0.5)-pbinom(0,size=10,prob=0.5)
+## using pmf:
+choose(10,1) * 0.5 * (1-0.5)^9
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Discrete example: The binomial random variable}
+
+The built-in function in R for the pmf is \texttt{dbinom}:
+
+<<binomcomputePequalszero>>=
+## P(X=1)
+choose(10,1) * 0.5 * (1-0.5)^9
+## using the built-in function:
+dbinom(1,size=10,prob=0.5)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Discrete example: The binomial random variable}
+
+<<pdfbinomial,include=TRUE,echo=TRUE,cache=TRUE,fig.width=4,fig.height=3,out.width='0.75\\textwidth'>>=
+## Plot the pmf:
+plot(1:11,dbinom(0:10,size=10,prob=0.5),main="PMF",
+     xaxt="n",ylab="P(X=x)",xlab="x")
+axis(1,at=1:11,labels=0:10)
+@
+
+\end{frame}
+
+
+\begin{frame}\frametitle{Summary: Random variables}
+
+To summarize, the discrete binomial random variable X will be defined by
+
+\begin{enumerate}
+\item the function $X: S\rightarrow \mathbb{R}$, where S is the set of outcomes (i.e., outcomes are $\omega \in S$).
+\item $X(\omega) = x$, and $S_X$ is the \textbf{support} of X (i.e., $x\in S_X$).
+\item A PMF is defined for X:
+\begin{equation*}
+p_X : S_X \rightarrow [0, 1] 
+\end{equation*}
+
+\begin{equation}
+p_X(x)= {n \choose x} \theta^x (1-\theta)^{n-x} 
+\end{equation} 
+
+
+\item A CDF is defined for X:
+\begin{equation*}
+F(a)=\sum_{\hbox{all } x \leq a} p(x)
+\end{equation*}
+\end{enumerate}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating random binomial data}
+
+We can use the \textbf{rbinom} function to generate binomial data.
+So, 10 coin tosses can be simulated as follows:
+
+<<>>=
+rbinom(1,n=10,prob=0.5)
+@
+
+We switch now to class exercises.
+
+\end{frame}
+
+
+\subsection{The normal random variable}
+
+\begin{frame}\frametitle{Continuous example: The normal random variable}
+
+The pdf of the normal distribution is:
+
+\begin{equation}
+f_{X}(x)=\frac{1}{\sqrt{2\pi \sigma^2}}
+e^{-\frac{1}{2}\frac{(x-\mu)^{2}}{\sigma^2}},\quad -\infty < x < \infty
+\end{equation}
+
+We write $X\sim \mathtt{norm}(\mathtt{mean}=\mu,\,\mathtt{sd}=\sigma)$.
+
+The associated $\texttt{R}$ function for the pdf is \texttt{dnorm(x, mean = 0, sd = 1)}, and the one for cdf is \texttt{pnorm}.
+
+Note the default values for $\mu$ and $\sigma$ are 0 and 1 respectively. Note also that R defines the PDF in terms of $\mu$ and $\sigma$, not $\mu$ and $\sigma^2$ ($\sigma^2$ is the norm in statistics textbooks).
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Continuous example: The normal RV}
+
+<<pdfnormal,include=TRUE,echo=TRUE,cache=TRUE,fig.width=4,fig.height=3,out.width='0.75\\textwidth'>>=
+plot(function(x) dnorm(x), -3, 3,
+      main = "Normal density",ylim=c(0,.4),
+              ylab="density",xlab="X")
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Probability: The area under the curve}
+
+<<shadenormal,echo=FALSE>>=
+## function for plotting CDF:
+plot.prob<-function(x,
+                           x.min,
+                           x.max,
+                           prob,
+                           mean,
+                           sd,
+                           gray.level,main){
+
+        plot(x,dnorm(x,mean,sd), 
+                     type = "l",xlab="",
+             ylab="",main=main)
+        abline(h = 0)
+
+## shade X<x    
+    x1 = seq(x.min, qnorm(prob), abs(prob)/5)
+    y1 = dnorm(x1, mean, sd)
+
+    polygon(c(x1, rev(x1)), 
+            c(rep(0, length(x1)), rev(y1)), 
+            col = gray.level)
+  }
+
+shadenormal<- 
+function (prob=0.5,
+          gray1="black",
+          x.min=-6,
+          x.max=abs(x.min),
+          x = seq(x.min, x.max, 0.01),
+          mean=0,
+          sd=1,main="P(X<0)") 
+{
+
+     plot.prob(x=x,x.min=x.min,x.max=x.max,
+               prob=prob,
+                      mean=mean,sd=sd,
+     gray.level=gray1,main=main)     
+}
+@
+
+<<plotshadenormal,include=TRUE,echo=FALSE,cache=TRUE,fig.width=4,fig.height=3,out.width='0.75\\textwidth'>>=
+shadenormal(prob=0.975,main="P(X<1.96)")
+@
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Continuous example: The normal RV}
+
+Computing probabilities using the CDF:
+
+<<computingprobsnormal>>=
+## The area under curve between +infty and -infty:
+pnorm(Inf)-pnorm(-Inf)
+## The area under curve between 2 and -2:
+pnorm(2)-pnorm(-2)
+## The area under curve between 1 and -1:
+pnorm(1)-pnorm(-1)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Finding the quantile given the probability} 
+
+We can also go in the other direction: given a probability $p$, we can find the quantile $x$ of a $Normal(\mu,\sigma)$ such that $P(X<x)=p$.
+
+For example:
+
+The quantile $x$ given  $X\sim N(\mu=500,\sigma=100)$  such that $P(X<x)=0.975$ is
+
+<<>>=
+qnorm(0.975,mean=500,sd=100)
+@
+
+This will turn out to be very useful in statistical inference.
+
+\end{frame}
+
+
+
+\begin{frame}\frametitle{Standard or unit normal random variable} 
+
+If $X$ is normally distributed with parameters $\mu$ and $\sigma$, then $Z=(X-\mu)/\sigma$ is normally distributed with parameters $\mu=0,\sigma = 1$.
+
+We conventionally write $\Phi (x)$ for the CDF of N(0,1):
+
+\begin{equation}
+\Phi (x)=\frac{1}{\sqrt{2\pi}} \int_{-\infty}^{x}  e^{\frac{-y^2}{2}} \, dy 
+\quad \textrm{where } y=(x-\mu)/\sigma
+\end{equation}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Standard or unit normal random variable} 
+
+For example: $\Phi(2)$:
+
+<<pnormtwo>>=
+pnorm(2)
+@
+
+For negative $x$ we write:
+
+\begin{equation}
+\Phi (-x)= 1- \Phi (x),\quad -\infty < x < \infty
+\end{equation}
+
+See the shiny app for a visualization.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Standard or unit normal random variable} 
+
+In R:
+
+<<negativexpnorm>>=
+1-pnorm(2)
+## alternatively:
+pnorm(2,lower.tail=F)
+@
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Standard or unit normal random variable} 
+
+If $Z$ is a standard normal random variable (SNRV) then
+
+\begin{equation}
+p\{ Z\leq -x\} = P\{Z>x\}, \quad -\infty < x < \infty
+\end{equation}
+
+Since $Z=((X-\mu)/\sigma)$ is an SNRV whenever $X$ is normally distributed with parameters $\mu$ and $\sigma$, then the CDF of $X$ can be expressed as:
+
+\begin{equation}
+F_X(a) = P\{ X\leq a \} = P\left( \frac{X - \mu}{\sigma} \leq \frac{a - \mu}{\sigma}\right) = \Phi\left( \frac{a - \mu}{\sigma} \right)
+\end{equation}
+
+The standardized version of a normal
+random variable X is used to compute specific probabilities relating to X.
+
+We will soon see the relevance of the SNRV in hypothesis testing.
+
+\end{frame}
+
+\subsection{Summary: dnorm, pnorm, qnorm}
+
+\begin{frame}[fragile]\frametitle{dnorm, pnorm, qnorm}
+
+\begin{enumerate}
+\item
+For the normal distribution we have built in functions:
+\begin{enumerate}
+\item dnorm: the pdf
+\item pnorm: the cdf
+\item qnorm: the inverse of the cdf
+\end{enumerate}
+\item Other distributions also have analogous functions:
+\begin{enumerate}
+\item Binomial: dbinom, pbinom, qbinom
+\item t-distribution: dt, pt, qt
+\end{enumerate}
+\end{enumerate}
+
+We will be using the t-distribution's dt, pt, and qt functions a lot in statistical inference.
+
+\end{frame}
+
+
+
+\section{Maximum Likelihood Estimation}
+
+\begin{frame}[fragile]\frametitle{Maximum Likelihood Estimation}
+
+We now turn to an important topic: maximum likelihood estimation.
+
+
+\end{frame}
+
+\subsection{The binomial distribution}
+
+\begin{frame}[fragile]\frametitle{MLE: The binomial distribution}
+
+Suppose we toss a fair coin 10 times, and count the number of heads each time; we repeat this experiment 5 times in all. The observed sample values are $x_1, x_2,\dots, x_5$. 
+
+<<>>=
+(x<-rbinom(5,size=10,prob=0.5))
+@
+
+The joint probability of getting all these values (assuming independence) depends on the parameter we set for the probability $\theta$:
+
+$P(X_1=x_1,X_2=x_2,\dots,X_n=x_n)$ 
+
+$=f(X_1=x_1,X_2=x_2,\dots,X_n=x_n;\theta)$  
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{MLE: The binomial distribution}
+
+$P(X_1=x_1,X_2=x_2,\dots,X_n=x_n)$ 
+
+$= f(X_1=x_1,X_2=x_2,\dots,X_n=x_n;\theta)$
+
+So, the above probability is a function of $\theta$. 
+When this quantity is expressed as a function of $\theta$, we call it the \textbf{likelihood function}.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{MLE: The binomial distribution}
+
+The value of $\theta$ for which this function has the maximum value is the \textbf{maximum likelihood estimate}.
+
+<<likfun0,echo=TRUE,fig.width=6>>=
+## probability parameter fixed at 0.5
+theta<-0.5
+prod(dbinom(x,size=10,prob=theta))
+## probability parameter fixed at 0.1
+theta<-0.1
+prod(dbinom(x,size=10,prob=theta))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{MLE: The binomial distribution}
+
+Let's compute the product for a range of probabilities:
+
+<<likfun,echo=TRUE>>=
+theta<-seq(0,1,by=0.01)
+store<-rep(NA,length(theta))
+for(i in 1:length(theta)){
+store[i]<-prod(dbinom(x,size=10,prob=theta[i]))
+}
+@
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{MLE: The binomial distribution}
+
+<<likfunplot,echo=FALSE,fig.height=4>>=
+plot(1:length(store),store,xaxt="n",xlab="theta",
+     ylab="f(x1,...,xn|theta")
+axis(1,at=1:length(theta),labels=theta)
+@
+
+\end{frame}
+
+\begin{frame}\frametitle{MLE: The binomial distribution}
+\framesubtitle{Detailed derivations: see lecture notes}
+
+We can obtain this estimate of $\theta$ that maximizes likelihood by computing:
+
+\begin{equation}
+\hat \theta = \frac{x}{n}
+\end{equation}
+
+where $n$ is sample size, and $x$ is the number of successes.
+
+\medskip
+For the analytical derivation, see the Linear Modeling lecture notes:
+https://github.com/vasishth/LM
+
+\end{frame}
+
+\subsection{The normal distribution}
+
+\begin{frame}\frametitle{MLE: The normal distribution}
+\framesubtitle{Detailed derivations: see lecture notes}
+
+For the normal distribution, where $X \sim N(\mu,\sigma)$, we can get MLEs of $\mu$ and $\sigma$ by computing:
+
+\begin{equation}
+  \hat \mu = \frac{1}{n}\sum x_i = \bar{x}  
+\end{equation}
+
+and
+
+\begin{equation}
+	\hat \sigma ^2 = \frac{1}{n}\sum (x_i-\bar{x})^2
+\end{equation}
+
+you will sometimes see the ``unbiased'' estimate (and this is what R computes) but for large sample sizes the difference is not important:
+
+\begin{equation}
+  \hat \sigma ^2 = \frac{1}{n-1}\sum (x_i-\bar{x})^2
+\end{equation}
+
+\end{frame}
+
+\begin{frame}\frametitle{The significance of the MLE}
+
+The significance of these MLEs is that, having assumed a particular underlying pdf, we can estimate the (unknown) parameters (the mean and variance) of the distribution that generated our particular data. 
+
+This leads us to the distributional properties of the mean \textbf{under repeated sampling}.
+
+\end{frame}
+
+
+\end{document}
+
+
