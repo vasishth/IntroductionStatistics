@@ -1,0 +1,25 @@
+Videos covering the frequentist lectures at Charite, 2019:
+
+1. lecture 1: Frequentist Null Hypothesis Significance Testing
+https://youtu.be/S3nOZIQ8cgQ
+
+2. lecture 2: Foundations
+https://youtu.be/plRB7z0bczI
+https://youtu.be/hXM4LIT1NDY
+
+3. lecture 3: Sampling distribution:
+https://youtu.be/3XcFaHe9G1A
+
+4. lecture 4: t-test:
+https://youtu.be/Fv_KhJe22BY
+
+5. lecture 5: linear models:
+https://youtu.be/PM-6wnBRoVw
+
+6. lecture 6: calibrating errors
+https://youtu.be/QE92uSLeg5o
+https://youtu.be/dxhbbkDe5fY
+
+7. lecture 7: model assumptions and selection:
+https://youtu.be/NgvQhxPl9i8
+https://youtu.be/0PVk_sfAzH4
