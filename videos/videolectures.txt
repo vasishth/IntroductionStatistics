@@ -1,4 +1,4 @@
-Videos covering the frequentist lectures at Charite, 2019:
+Videos covering the frequentist lectures, summer 2019:
 
 1. lecture 1: Frequentist Null Hypothesis Significance Testing
 https://youtu.be/S3nOZIQ8cgQ
