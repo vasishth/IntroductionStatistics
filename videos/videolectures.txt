@@ -16,6 +16,8 @@ https://youtu.be/Fv_KhJe22BY
 5. lecture 5: linear models:
 https://youtu.be/PM-6wnBRoVw
 
+to-do: lecture on linear mixed models
+
 6. lecture 6: calibrating errors
 https://youtu.be/QE92uSLeg5o
 https://youtu.be/dxhbbkDe5fY
