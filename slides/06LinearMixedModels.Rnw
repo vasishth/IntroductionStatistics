@@ -404,7 +404,7 @@ abline(lm(logrt~so,dat),lwd=3,col="red")
 i indexes subjects, j items.
 
 \begin{equation}
-y_{ij} = \beta_0 + u_{0i}+\beta_1\times so_{ij} + \epsilon_{ij}
+y_{ij} = \beta_0 + u_{0i}+(\beta_1 + u_{1i})\times so_{ij} + \epsilon_{ij}
 \end{equation}
 
 Variance components:
@@ -677,7 +677,9 @@ rand<-rbinom(1,n=16,prob=0.5)
 <<>>=
 dat[which(dat$subject==37),]$rawRT
 dat$deletedRT<-dat$rawRT
-dat[which(dat$subject==37),]$deletedRT<-ifelse(rand,NA,dat[which(dat$subject==37),]$rawRT)
+dat[which(dat$subject==37),]$deletedRT<-
+  ifelse(rand,NA,
+         dat[which(dat$subject==37),]$rawRT)
 @
 
 \end{frame}
