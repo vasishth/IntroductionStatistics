@@ -436,7 +436,7 @@ Later you  will see examples of models  that fail to achieve this, for some abst
 
 \end{frame}
 
-\section{Within-subject designs: Simulating data}
+\section{Within-subjects 1: Simulating data}
 
 \begin{frame}[fragile]\frametitle{Generating within-subjects data}
 
@@ -699,4 +699,634 @@ So this linear mixed model is looking pretty OK in terms of parameter recovery.
 However, in some cases the $\sigma_{u0}$ parameter is not estimated accurately.   
 
 \end{frame}
+
+\section{Within-subjects 2: Simulating data  with multiple data-points for each subject}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+Above, we had only one data point from each subject for each RC type. 
+
+<<>>=
+xtabs(~subj + cond,sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+Normally, we collect more than one data point for each condition, from each subject.
+
+We now generate 20 data points from each subject for SRs, and 20 data points from each subject for ORs. The multiple data points from each subjected in each condition is technically called a \textbf{replicate}. 
+
+<<<>>=
+## create data frame:
+## num subjs
+n<-10
+## num replicates
+k<-20
+## the cond vector has to be made n*k times long for each condition:
+cond<-rep(c(-1,1),each=n*k)
+## subject vector:
+## each of the n subject ids has to be repeated k times, and
+## there are two conditions, so the whole vector has to be 
+## repeated. This can be implemented with two rep functions:
+subj<-rep(rep(1:n,each=k),2)
+## create data frame:
+sim_dat<-data.frame(subj=subj,
+                 cond=cond)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+<<>>=
+head(sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+<<>>=
+## generate repeated measures data:
+sim_dat$rt<-725+
+            rep(rep(round(rnorm(n,0,200)),each=k),2)+
+            25*cond+
+            rnorm(n*k*2,0,300)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+The only challenging thing here is the adjustment to the intercept:
+
+\begin{itemize}
+\item
+Each of the n subjects' adjustments has to be repeated k times. 
+\item
+Then, we need  to repeat that vector of adjustments for SRs and ORs.
+\item  
+That's how the line of code  below comes about.
+\end{itemize}
+
+<<>>=
+rep(rep(round(rnorm(n,0,100)),each=k),2)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+Break this up step by step to understand it:
+
+<<>>=
+## For n=10 subjects, create an adjustment:
+u0<-round(rnorm(n,0,100))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+
+Repeat each of these adjustments k=20 times for the first condition:
+
+<<>>=
+rep(round(u0),each=k)
+@
+
+Now repeat this entire vector for the second condition:
+
+<<>>=
+rep(rep(u0,each=k),2)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+
+We now have $10\times20=200$ data points for subject relatives and $200$ for object relatives:
+
+<<>>=
+## sanity check time!
+dim(sim_dat)
+xtabs(~subj+cond,sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+One can fit a varying intercepts model:
+
+<<>>=
+m2<-lmer(rt~cond+(1|subj),sim_dat,
+         control=lmerControl(calc.derivs=FALSE))
+@
+
+We can also fit a varying intercepts + varying  slopes model:
+<<>>=
+m3<-lmer(rt~cond+(1+cond|subj),sim_dat,
+         control=lmerControl(calc.derivs=FALSE))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+
+You should get output like this (obviously, the numbers will be different for you  as  we are randomly generating data):
+
+<<>>=
+summary(m3)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+Now, we add the assumption that some subjects have larger  relative clause effects, and some smaller effects. Some have the same as same RC effect as the mean RC effect. This generative process corresponds  to  the  varying intercepts and varying slopes model.
+
+Let's assume that subjects variation about the mean slope can be modeled as:
+
+$Normal(0,50)$ 
+
+I just chose an sd of 50 arbitrarily.
+
+<<>>=
+(u1<- round(rnorm(n,mean=0,sd=50)))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+Since the slope in the model is assumed to be 25 ms, what we see is that some subjects have a larger effect and some have a smaller effect than this 25 ms effect.
+
+So, for object relatives:
+
+<<>>=
+(25+u1)*1
+@
+
+and for subject relatives:
+
+<<>>=
+(25+u1)*(-1)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+
+We can also plot the variability in the mean SR and and the mean OR effect. In this plot, the circles refer to object relatives, and the square with the cross inside it to subject relatives.
+
+<<>>=
+## ORs
+plot(1:10,(25+u1)*1,
+     xlab="subject",
+     ylab="estimate (ms)",ylim=c(-100,100))
+## SRs:
+points(1:10,(20+u1)*(-1),pch=12)
+abline(h=25)
+@
+
+We can now generate data that incorporates this additional assumption, that each subject has different slopes:
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+<<>>=
+## generate data for SR and OR conditions row by row:
+rt <- 725+rep(rep(round(rnorm(n,0,100)),each=k),2)+
+   (25 + rep(rep(round(rnorm(n,0,50)),each=k),2))*cond + 
+  rnorm(n*k*2,0,200)
+## add to data frame:
+sim_dat$rt<-rt
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+We can visualize the RC by-subject effects. First, I  define  a plotting function:
+
+<<>>=
+library(ggplot2)
+gg_xyplot <- function(x, y, formula, shape, size, 
+                      xlabel="RC Type", 
+                      ylabel="ms",
+                      data=sim_dat){
+    ggplot(data = data, aes(x = data[,x],
+                            y = data[,y]))  +
+    facet_wrap(formula) +
+    geom_smooth(method="lm")+
+    geom_point(color = "blue", 
+               shape = shape, size = size) +
+    theme(panel.grid.minor = element_blank()) +
+    theme_bw() +
+    ylab(ylabel) +
+    xlab(xlabel)
+}
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+<<echo=FALSE>>=
+gg_xyplot(x = "cond", y = "rt",  ~ subj,  
+          shape = 1, size = 3, 
+          data = sim_dat)
+@
+
+Notice that each subject has a different slope.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+Fit the following model, which assumes that each subject has a different grand mean (intercept) and different slope. \textbf{Notice that I am using double vertical bars in the code below}. 
+
+<<>>=
+m3<-lmer(rt~cond + (1+cond||subj),sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+
+The output should look something like this (the numbers will vary for each of you).
+
+<<>>=
+summary(m3)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+This model can be written as follows:
+
+$rt \sim Normal(\beta_0 + u_0 + (\beta_1+u_1)*cond,200)$ 
+
+where
+
+$u_0 \sim  Normal(0,100)$
+
+$u_1 \sim  Normal(0,50)$
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+Notice that there are \textbf{three} variance components:
+
+\begin{itemize}
+\item Normal(0,100): the adjustments by subject to the grand mean 
+\item Normal(0,50): the adjustments by subjects to the mean slope
+\item Normal(0,200): the residual error
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
+
+The model estimates these standard deviations. Here is what I got (the three standard deviations' estimates are shown in order):
+
+\begin{verbatim}
+Random effects:
+ Groups    Name        Variance Std.Dev.
+ subject   (Intercept) 10547    102.7   <- Estimate of u0 sd
+ subject.1 cond        12432    111.5   <- Estimate of u1 sd
+ Residual              41881    204.6   <- estimate of residual error sd
+\end{verbatim}
+
+The first and last estimates are accurate, the slope standard deviation is an overestimate.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+The data generation approach used above can be made easier to understand by using the following approach: 
+
+<<>>=
+## number of subjects
+n<-10
+## number of replicates
+k<-20
+## generate data frame with subject and condition column:
+cond<-rep(c(-1,1),each=n*k)
+sim_dat<-data.frame(sub=rep(rep(1:n,each=k),2),
+                 cond=cond)
+head(sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+
+Now generate the by-subject intercept adjustments and by subject slope adjustments and create another data frame with these:
+
+<<>>=
+sigma_u0<-200
+sigma_u1<-50
+u<-data.frame(subject=1:n,
+              u0=round(rnorm(n,0,sigma_u0)),
+              u1=round(rnorm(n,0,sigma_u1)))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+<<>>=
+head(u)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+Now, what we will do is that \textbf{for each row} i in the sim\_dat data frame we created above, we will
+
+\begin{itemize}
+\item look up the subject id s in the data frame dat's row i
+\item find out what the by-subject intercept adjustment (u0) is for that subject s
+\item find out what the by-subject slope adjustment (u1) is for that subject s
+\item generate the reading time for that row in the data frame sim\_dat using the equation we saw above:
+  
+  $rt \sim b0 + u0 + (b1 + u1)*cond + rnorm(1,0,300)$ 
+  
+\end{itemize}
+  
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+  
+<<>>=
+## record the number of rows in the data frame dat:
+nrows<-dim(sim_dat)[1]
+
+## create a vector to store reading times generated row by row:
+rt<-rep(NA,nrows)
+
+b0<-725
+b1<-25
+sigma<-300
+## run a for-loop to carry out the above steps:
+for(i in 1:nrows){
+rt[i] <- b0 + u[sim_dat[i,]$subj,]$u0 + 
+   (b1 + u[sim_dat[i,]$subj,]$u1)*sim_dat[i,]$cond + rnorm(1,0,sigma)   
+}
+sim_dat$rt<-rt
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+\begin{itemize}
+\item
+The critical new development here is that in the for loop, we are using the row id to figure out which subject we need to get the adjustment to the intercept and slope for. 
+\item
+For example, when i=1, i.e., when the row id is 1, we can figure out the subject id in the data frame as follows:
+
+<<>>=
+sim_dat[1,]$subj
+@
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+
+Once you know this subject id, you can look up appropriate subject id in the data frame u to get the adjustment to the  intercept and  the slope. For example, how  do I  get the  first subject's intercept and slope adjustment?
+
+<<>>=
+u[1,]$u0
+u[1,]$u1
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+
+Instead of writing 1 manually,  we could have looked up the subject id we need from the i-th row of the data frame sim\_dat! 
+
+<<>>=
+u[sim_dat[1,]$subject,]$u0
+u[sim_dat[1,]$subject,]$u1
+@
+
+That is what the above code that generates the simulated rt data is doing. 
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+\begin{itemize}
+\item
+And that's it.  Once you have generated the data, fit the same model as m3 to this data. 
+\item
+Print out the summary of the model, and check whether the model's parameter estimates roughly match the numbers you used to generate the data.
+This is just a sanity check for you. 
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+Now, using the simpler/more elegant approach I showed above, write a function called gendat that generates data, with input the sample size, the number of repetitions per condition k, the grand mean, the RC effect, and the three standard deviations. 
+
+The function should work as follows. When we type:
+
+\begin{verbatim}
+sim_dat<-gendat(n=10,k=20,
+            b0=725,b1=25,
+            sigma_u0=200,sigma_u1=50,
+            sigma=300)
+\end{verbatim}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+
+We should get the appropriate data frame. For example:
+
+<<echo=FALSE>>=
+gendat<-function(n=5,k=5,b0=725,b1=25,
+            sigma_u0=200,
+            sigma_u1=50,sigma=300){
+cond<-rep(c(-1,1),each=n*k)
+sim_dat<-data.frame(subj=rep(rep(1:n,each=k),2),
+                 cond=cond)
+
+u<-data.frame(subj=1:n,u0=round(rnorm(n,0,sigma_u0)),
+                       u1=round(rnorm(n,0,sigma_u1)))
+
+nrows<-dim(sim_dat)[1]
+
+rt<-rep(NA,nrows)
+
+for(i in 1:nrows){
+rt[i] <- b0 + u[sim_dat[i,]$subj,]$u0 + 
+   (b1 + u[sim_dat[i,]$subj,]$u1)*sim_dat[i,]$cond + rnorm(1,0,sigma)   
+}
+sim_dat$rt<-rt
+sim_dat
+}
+@
+
+<<>>=
+sim_dat<-gendat(n=5,k=5,b0=725,b1=50,
+            sigma_u0=200,
+       sigma_u1=50,
+       sigma=300)
+head(sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+Using the gendat function, write a for-loop (100 iterations) that computes the proportion of times that the absolute value of the t-score for the slope (the RC effect) is greater than 2. 
+
+This is the estimated power of the experiment; the estimated probability that we would detect the effect (assuming our belief about the true effect is being whatever we set it to be is correct).
+
+<<eval=FALSE,echo=FALSE>>=
+tvals<-rep(NA,100)
+for(j in 1:100){
+  dat<-gendat(samplesize=20,k=20,b0=725,b1=30,
+         intsd=150,slopesd=75,residsd=300)
+  m0<-lmer(rt~cond+(1+cond||subject),dat)
+  tvals[j]<-summary(m0)$coefficients[2,3]
+}
+
+mean(abs(tvals)>2)
+@
+
+\end{frame}
+
+\section{Within-subjects 3: Simulating data  with multiple data-points for each subject}
+
+\begin{frame}[fragile]\frametitle{Generating data with correlated intercepts and slopes}
+
+Here is how we can generate bivariate correlated data.
+
+Let's assume that the correlation between the varying intercepts and  slopes is 0.5.
+
+<<>>=
+library(MASS)
+Sigma<-matrix(c(200^2,200*50*0.5,
+                200*50*0.5,50^2),ncol=2)
+
+u<-mvrnorm(50,mu=c(0,0),Sigma=Sigma)
+head(u)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating data with correlated intercepts and slopes}
+
+<<fig.height=4>>=
+plot(u[,1],u[,2])
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating data with correlated intercepts and slopes}
+
+Or assume that the correlation between the varying intercepts and  slopes is -0.5.
+
+<<>>=
+Sigma<-matrix(c(200^2,200*50*-0.5,
+                200*50*-0.5,50^2),ncol=2)
+
+u<-mvrnorm(50,mu=c(0,0),Sigma=Sigma)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating data with correlated intercepts and slopes}
+
+<<fig.height=4>>=
+plot(u[,1],u[,2])
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating data with correlated intercepts and slopes}
+
+Or assume that the correlation between the varying intercepts and  slopes is 0.
+
+<<>>=
+Sigma<-matrix(c(200^2,200*50*0,
+                200*50*0,50^2),ncol=2)
+
+u<-mvrnorm(50,mu=c(0,0),Sigma=Sigma)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating data with uncorrelated intercepts and slopes}
+
+<<fig.height=4>>=
+plot(u[,1],u[,2])
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating data with correlated intercepts and slopes}
+
+Now you should be able to:
+
+\begin{itemize}
+\item
+extend the gendat function to generate correlated intercepts and slopes
+\item 
+compute power using this function
+\item 
+check whether parameters can be  recovered under repeated sampling in the so-called maximal model.
+\end{itemize}
+
+These things will be part of the  homework assignments for simulating  data.
+
+\end{frame}
+
+
 \end{document}
