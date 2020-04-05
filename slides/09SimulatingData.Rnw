@@ -44,7 +44,7 @@
 %\usecolortheme{seagull}
 \usecolortheme{lily}
 
-\title[Lecture 6]{Introduction to statistics: Linear mixed models}
+\title[Lecture 6]{Introduction to statistics: Simulating data}
 
 \author{Shravan Vasishth}
 
@@ -81,896 +81,622 @@ opts_chunk$set(dev='postscript')
 
 
 
-\section{The story so far}
+\section{Introduction}
 
-\begin{frame}[fragile]\frametitle{Summary}
-\begin{enumerate}
-\item We know how to do simple t-tests.
-\item We know how to fit simple linear models.
-\item We saw that the paired t-test is identical to the varying intercepts linear mixed model.
-\end{enumerate}
+\begin{frame}[fragile]\frametitle{Why simulation  is important}
 
-Now we are ready to look at linear mixed models in detail.
+We will need to  simulate  data to
+
+\begin{itemize}
+\item Understand the power properties of our experiment design. This  is important for
+\begin{itemize}
+\item deciding on sample sizes needed
+\item deciding whether we are in a Type M error situation when we get a significant result (can we take the sig.\ result seriously?). 
+\end{itemize}
+\item Understand which parameters can in principle be recovered under repeated sampling (model selection)
+\end{itemize}
 
 \end{frame}
 
+\begin{frame}[fragile]\frametitle{Two simulation scenarios}
 
-\section{Linear mixed models}
+We will consider two scenarios:
 
-\begin{frame}[fragile]\frametitle{Linear models}
+\begin{itemize}
+\item Between-subject designs: This is  just to get you used to simulation. We rarely use this in practice.
+\item Within-subject  designs: This  is where all the  interesting action is for us, as we will almost always run repeated measures designs.
+\end{itemize}
 
-Returning to our SR/OR relative clause data from English (Grodner and Gibson, Expt 1). First we load the data as usual (not shown).
+\end{frame}
+
+\section{Between-subject designs: Simulating  data}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example}
+
+\begin{itemize}
+\item
+Suppose we have reading time data in milliseconds from 10 subjects who see subject relative clause sentences, and a *different* set of 10 subjects who see object relative clauses. 
+\item
+Assume that (a) the standard deviation is 300 ms, (b) the true subject relative reading time is 700 ms and (c) the true object relative reading time is 750 ms. 
+\item
+Thus, the true difference between subject relatives and object relatives is 50 ms. \end{itemize}
+
+How to simulate such data?
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example}
+
+
+Create a simulated data-set like this:
+
+Take 10 samples from $Normal(\mu=700,\sigma=300)$
+
+Take 10 samples from $Normal(\mu=750,\sigma=300)$
+
+Create a data frame by adding a subject id.
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example}
 
 <<>>=
-gge1crit<-read.table("data/grodnergibson05data.txt",
-                     header=TRUE)
-
-gge1crit$so<-ifelse(gge1crit$condition=="objgap",1,-1)
-
-dat<- gge1crit
-dat$logrt<-log(dat$rawRT)
-
-bysubj<-aggregate(logrt~subject+condition,
-                  mean,data=dat)
+sr<-rnorm(10,mean=700,sd=300)
+or<-rnorm(10,mean=750,sd=300)
+subj<-1:20
+cond<-rep(c("sr","or"),each=10)
+sim_dat<-data.frame(subj=subj,cond=cond,rt=c(sr,or))
+head(sim_dat)
 @
 
 \end{frame}
 
-\begin{frame}[fragile]\frametitle{Linear models}
+\begin{frame}[fragile]\frametitle{Between-subjects example}
 
-The simple linear model (incorrect for these data):
+Question: How can we repeatedly generate such data?
+
+Answer: write a function (I set some default values here).
+
 <<>>=
-summary(m0<-lm(logrt~so,dat))$coefficients
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear models}
-
-We can visualize the different responses of subjects (four subjects shown):
-
-<<echo=FALSE,include=FALSE,messages=FALSE>>=
-library(ggplot2)
-gg_xyplot <- function(x, y, formula, shape, size, data){
-    ggplot(data = data, aes(x = data[,x],
-                            y = data[,y]))  +
-    facet_wrap(formula) +
-    geom_smooth(method="lm")+
-    geom_point(color = "blue", shape = shape, size = size) +
-    theme(panel.grid.minor = element_blank()) +
-    theme_bw() +
-#     scale_x_discrete(breaks=c("-1","0.5","0","0.5","1"),labels=c("OR","", "", "", "SR"))+
-     scale_x_continuous(breaks = round(seq(-1, 1, by = 2),1))+ 
-    ylab(y) +
-    xlab("condition (-1: SR, +1: OR)")
+betwsubj_simdat<-function(n=10,## no. subjs in each cond.
+                          mean1=700,stddev=300,
+                          mean2=750){
+sr<-rnorm(n,mean=mean1,sd=stddev)
+or<-rnorm(n,mean=mean2,sd=stddev)
+subj<-1:(2*n)
+cond<-factor(rep(c("sr","or"),each=n))
+sim_dat<-data.frame(subj=subj,cond=cond,rt=c(sr,or))
+sim_dat
 }
 @
 
-<<echo=FALSE,fig.height=4>>=
-gg_xyplot(x = "so", y = "logrt",  ~ subject,  
-          shape = 1, size = 3, 
-          data = subset(dat,subject%in%c(1,28,37,38)))
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example}
+
+Now you can repeatedly generate simulated data:
+
+<<>>=
+for(i in 1:100){
+  sim_dat<-betwsubj_simdat()
+}
+@
+
+Why would you want to do that? For power analysis, and to check if our model recovers the parameters  correctly under repeated runs of the experiment (with new simulated subjects each time).
+
+\end{frame}
+
+\subsection{Power analysis in a between-subjects design}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example of power analysis}
+
+Analytically:
+
+<<>>=
+round(power.t.test(delta=50,n=10,
+             sd=300,type="two.sample",
+             alternative="two.sided",
+             strict=TRUE)$power,3)
+@
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example of power analysis}
+
+Using simulation:
+
+<<cache=TRUE>>=
+nsim<-100000
+## critical t-value:
+crit_t<- qt(0.975,df=18)
+## observed t-values:
+obs_t<-rep(NA,nsim)
+
+for(i in 1:nsim){
+sim_dat<-betwsubj_simdat()
+obs_t[i]<-t.test(rt~cond,paired=FALSE,sim_dat)$statistic
+}
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example of power analysis}
+
+<<>>=
+pow<-mean(abs(obs_t)>abs(crit_t))
+round(pow,2)
+@
+
+Lesson learnt: for simple between-subject designs, you can use the analytical approach  or simulation.
+
+\end{frame}
+
+\subsection{Using linear models for between-subjects designs}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+Next, we will learn how to compute power using simulation in \textbf{between}-subjects designs using the linear modeling framework (as opposed to the t.test)
+
+After that, will learn how to compute power using simulation in \textbf{within}-subjects designs using t.test and lmer.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+Notice that the default contrast coding is 0,1 treatment coding:
+
+<<>>=
+sim_dat<-betwsubj_simdat()
+contrasts(sim_dat$cond)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+Recode  to sum contrasts:
+
+<<>>=
+## Method 1:
+contrasts(sim_dat$cond)<-contr.sum(2)
+contrasts(sim_dat$cond)
+##  Method 2: (my personal preference)
+sim_dat$rctyp<-ifelse(sim_dat$cond=="or",1,-1)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+Recall that the two-sample t-test (and ANOVA) and the linear model are exactly the same thing:
+
+<<>>=
+##  these are all the same test:
+t.test(rt~cond,paired=FALSE,sim_dat)$statistic
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+<<>>=
+anova(m0<-lm(rt~cond,sim_dat))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+<<>>=
+summary(m0<-lm(rt~cond,sim_dat))
 @
 
 \end{frame}
 
 
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
 
-\begin{frame}[fragile]\frametitle{Linear models}
+We can write the linear model as follows. 
 
-Given these differences between subjects, you could fit a separate linear model for each subject, collect together the intercepts and slopes for each subject, and then check if the intercepts and slopes are significantly different from zero.
+For every row i in the data frame dat above, the reading time rt is generated from a model where the contrast coding for the condition column in the i-th row of the data is either -1 or +1, depending on whether we are looking at subject or object relatives. $\varepsilon \sim Normal(0,300)$.
 
-\textbf{We will fit the model using log reading times because we want to make sure we satisfy model assumptions (e.g., normality of residuals).}
+\begin{equation}
+rt_i = 725 + 25 \times cond_i + \varepsilon_i
+\end{equation}
+
+Now, for the first 10 rows of the data frame, we have only SRs, which are coded -1, and for the second 10 rows, we have only ORs, which are coded +1.
 
 \end{frame}
 
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
 
-\begin{frame}[fragile]\frametitle{Linear models}
+So, the above definition of the linear model is basically expressing how the reading time rt in each row in the data frame is assumed to be generated:
 
-There is a function in the package \texttt{lme4} that computes separate linear models for each subject: \texttt{lmList}.
+\tiny
+\begin{tabular}{rrr}
+row &  Intercept & slope + error \\ 
+1 & 725$\times$ 1 & +25$\times$ (-1) + $\varepsilon_1$ \\ 
+  2 & 725$\times$ 1 & +25$\times$(-1)  + $\varepsilon_2$ \\ 
+  3 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_3$\\ 
+  4 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_4$ \\ 
+  5 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_5$ \\ 
+  6 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_6$ \\ 
+  7 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_7$ \\ 
+  8 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_8$ \\ 
+  9 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_9$ \\ 
+  10 & 725$\times$ 1 & +25$\times$(-1) + $\varepsilon_{10}$ \\ 
+  11 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{11}$ \\ 
+  12 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{12}$ \\ 
+  13 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{13}$ \\ 
+  14 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{14}$ \\ 
+  15 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{15}$ \\ 
+  16 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{16}$ \\ 
+  17 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{17}$ \\ 
+  18 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{18}$ \\ 
+  19 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{19}$ \\ 
+  20 & 725$\times$ 1 & +25$\times$(+1) + $\varepsilon_{20}$ \\ 
+\end{tabular}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+The model m0 is giving us an estimate of the adjustment to the grand mean needed to obtain OR or SR processing cost (700$\pm$ 25). $\varepsilon$ is a random variable with pdf Normal(0,300), and is responsible for the noisiness (variability) in the data.
+
+You can decide whether to reject the null hypothesis in model m0 by looking at the p-value. Recall that the null hypothesis is that OR and SR processing cost has no difference: $H_0: \mu_{SR}-\mu_{OR} = 0$. Here is how you extract the p-value:
+
+<<>>=
+summary(m0)$coefficients
+## get the second row and fourth column of the output:
+summary(m0)$coefficients[2,4]
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+You can now do a power analysis of the above experiment design using the linear modeling framework instead of the t-test. Here is how to do it:
+
+
+<<cache=TRUE>>=
+nsim<-10000
+pvals<-rep(NA,nsim)
+for(i in 1:nsim){
+## create random data
+## fit linear model
+## extract p-value and save in pvals vector
+}
+## check proportion of times the pvals are less 
+## than 0.05. That's your power. 
+@
+
+Stop now and try to do this yourself before moving to the next slide.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects example using linear models}
+
+
+<<cache=TRUE>>=
+nsim<-10000
+pvals<-rep(NA,nsim)
+for(i in 1:nsim){
+ sim_dat<-betwsubj_simdat()
+ m<-lm(rt~cond,sim_dat)
+ pvals[i]<-summary(m)$coefficients[2,4]
+}
+round(mean(pvals<0.05),2)
+@
+
+
+\end{frame}
+
+\subsection{Checking parameter recover in between-subjects designs}
+
+\begin{frame}[fragile]\frametitle{Between-subjects parameter recovery}
+
+We can also check whether the model can recover the true parameterrs under repeated sampling.
+
+This is an important check of the model's validity; this isn't normally  done  in frequentist courses, but it's a very important and useful tool for model selection, as you will soon see. 
+
+<<cache=TRUE>>=
+nsim<-10000
+params<-matrix(rep(NA,nsim*3),ncol = 3)
+
+for(i in 1:nsim){
+  sim_dat<-betwsubj_simdat()
+  m<-lm(rt~cond,sim_dat)
+  params[i,c(1,2)]<-summary(m)$coefficients[,1]
+  params[i,3]<-summary(m)$sigma
+}
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects parameter recovery}
+
+Parameter recovery is pretty good:
+
+<<fig.height=4,echo=FALSE>>=
+op<-par(mfrow=c(1,3),pty="s")
+hist(params[,1],main="b0")
+abline(v=725)
+hist(params[,2],main="b1")
+abline(v=25)
+hist(params[,3],main="sigma")
+abline(v=300)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Between-subjects parameter recovery}
+
+What this good parameter recovery is telling us is that the model can in principle provide accurate estimates  of the true parameter values,  under repeated sampling.
+
+Later you  will see examples of models  that fail to achieve this, for some abstract parameters.
+
+\end{frame}
+
+\section{Within-subject designs: Simulating data}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+Now suppose we have a \textbf{total} of 10 subjects, and we show each subject SRs and ORs once each. Now the subject id's become important!
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+This is how we could try to generate data now:
+
+<<>>=
+## number of subjects
+n<-10
+sr<-round(rnorm(n,mean=700,sd=300))
+or<-round(rnorm(n,mean=750,sd=300))
+subj<-rep(1:n,2)
+cond<-factor(rep(c("sr","or"),each=n))
+sim_dat<-data.frame(subj=subj,cond=cond,rt=c(sr,or))
+contrasts(sim_dat$cond)<-contr.sum(2)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+<<>>=
+head(sim_dat)
+@
+
+\end{frame}
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+Notice that the subject column now repeats the subject id from 1 to n (whatever n is) for SRs and ORs. The total number of subjects is a total of n now, not $2\times n$ like before.
+
+But these generated data do not reflect the fact that we have within-subjects data! The reason: we are incorrectly assuming that SR and OR reading times are independent! The SR and OR data are paired and therefore dependent because they involve the same subjects.
+
+How to induce dependency in the SR and OR data? 
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+
+Let us start by assuming that \textbf{each subject has a different true grand mean processing time}. We will use this assumption to induce a dependency.
+
+One way to encode the assumption that each subject has a different processing time is to assume that 
+
+\begin{itemize}
+\item some subjects have mean processing time that is greater than the grand mean 725
+\item other subjects have a mean processing time that is smaller than 725
+\item some subjects have a mean processing time that is the same as 725
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+We can generate random adjustments to the grand mean of 725 by subject by creating a vector of n scores from a random variable that has mean 0 and some standard deviation (I assume 200 here for illustration):
+
+<<>>=
+## grand mean processing cost of each subject:
+subject_adj<-round(rnorm(n,mean=0,sd=200))
+subject_adj
+@
+
+Here, if a subject has a value of 0 in the by-subject adjustments, this implies that the true grand mean reading time of the subject is 725 ms.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+Now we see that some subjects are faster than 725 ms and some are slower:
+
+<<>>=
+round(725+subject_adj)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+Now we can generate within subjects data as follows:
+
+<<>>=
+## create sum coded condition vector:
+cond<-rep(c(-1,1),each=n)
+rt <- round(725 + rep(subject_adj,2) + 
+              25 * cond + rnorm(n*2,0,200))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+Next, we replace the rt column in our incorrect data frame sim\_dat with this new corrected rt data, which is now coming from a within-subjects design.
+
+<<>>=
+## put in new RTs into data frame:
+sim_dat$rt<-rt
+head(sim_dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+This data can be (in fact, it *must* be) analyzed using the paired t-test!
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+
+<<>>=
+t.test(rt~cond,sim_dat,paired=TRUE,var.equal=TRUE)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+
+Recall that the same model can be fit using the linear mixed model with varying intercepts:
 
 <<>>=
 library(lme4)
-
-lmlist.fm1<-lmList(logrt~so|subject,dat)
+m1<-lmer(rt~cond+(1|subj),sim_dat,
+control=lmerControl(calc.derivs=FALSE))
 @
 
 \end{frame}
 
 
-\begin{frame}[fragile]\frametitle{Linear models}
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
 
-Intercept and slope estimates for three subjects:
+\tiny
+<<>>=
+summary(m1)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+The term $(1|subj)$ in the lmer call above refers to the by-subject adjustment to the grand mean that we did above when generating the data.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+
+Now compute power for this within-subjects design using the paired t-test.
+
+Hint: you can keep creating a new vector of data like this, and overwrite the rt column in the data frame sim\_dat:
 
 <<>>=
-lmlist.fm1$`1`$coefficients
-lmlist.fm1$`28`$coefficients
-lmlist.fm1$`37`$coefficients
+sim_dat$rt <- round(725 + rep(subject_adj,2) + 
+                      25 * cond + 
+                      rnorm(2*n,0,200))
+@
+
+Then you can do a paired t-test:
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
+
+<<>>=
+t.test(rt~cond,sim_dat,paired=TRUE,var.equal=TRUE)
 @
 
 \end{frame}
 
+\begin{frame}[fragile]\frametitle{Generating within-subjects data}
 
-\begin{frame}[fragile]\frametitle{Linear models}
 
-One can plot the individual lines for each subject, as well as the linear model m0's line (this shows how each subject deviates in intercept and slope from the model m0's intercept and slopes).
+<<cache=TRUE>>=
+nsim<-1000
+pvals<-tvals_lmer<-rep(NA,nsim)
+for(i in 1:nsim){
+  subject_adj<-round(rnorm(n,mean=0,sd=200))
+  sim_dat$rt <- round(725 + rep(subject_adj,2) + 
+                        25 * cond + rnorm(2*n,0,200))
+pvals[i]<-t.test(rt~cond,sim_dat,paired=TRUE)$p.value
+tvals_lmer<-summary(lmer(rt~cond+(1|subj),sim_dat,
+                         control=lmerControl(calc.derivs=FALSE)))$coefficients[2,3]}
+## power using paired t-test:
+mean(pvals<0.05)
+## using lmer:
+mean(abs(tvals_lmer)>2)
+@
 
 \end{frame}
 
-\begin{frame}[fragile]\frametitle{Linear models}
+\subsection{Checking parameter recover in within-subjects designs}
 
-<<echo=FALSE,fig.height=5>>=
-plot(dat$so,
-     dat$logrt,
-     axes=F,
-     xlab="condition",
-     ylab="log rt")
-axis(1,at=c(-1,1),
-     labels=c("SR","OR"))
-axis(2)
+\begin{frame}[fragile]\frametitle{Within-subjects parameter recovery}
 
-subjects<-1:42
+Let's write a function for generating repeated measures data:
 
-for(i in subjects){
-abline(lmlist.fm1[[i]])
+<<>>=
+withinsubj_simdat<-function(n=10,## no. subjs in each condition
+                          b0=725,stddev=300,
+                          b1=25,sigma_u0=200){
+  u0<-round(rnorm(n,mean=0,sd=200))
+  cond<-rep(c(-1,1),each=n)
+  subj<-rep(1:n,2)
+  rt <- round(b0 + rep(u0,2) + 
+                        b1 * cond + rnorm(2*n,0,stddev))
+sim_dat<-data.frame(subj=subj,cond=cond,rt=rt)
+sim_dat
 }
-
-abline(lm(dat$logrt~dat$so),lwd=3,col="red")
 @
 
 \end{frame}
 
-\begin{frame}[fragile]\frametitle{Linear models}
+\begin{frame}[fragile]\frametitle{Within-subjects parameter recovery}
 
-To find out if there is an effect of RC type, you can simply check whether the slopes of the individual subjects' fitted lines taken together are significantly different from zero.
+Now check if the model recovers the four parameters:
 
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear models}
-
-<<>>=
-t.test(coef(lmlist.fm1)[2])
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear models}
-
-The above test is exactly the same as the paired t-test and the varying intercepts linear mixed model \textbf{on aggregated data}:
-
-<<>>=
-t.test(logrt~condition,bysubj,paired=TRUE)$statistic
-
-## also compare with linear mixed model:
-summary(lmer(logrt~condition+(1|subject),
-             bysubj))$coefficients[2,]
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear models}
-
-\begin{itemize}
-\item
-The above lmList model we fit is called \textbf{repeated measures regression}. We now look at how to model unaggregated data using the linear mixed model.
-\item
-This model is now only of historical interest, and useful only for understanding the linear mixed model, which is the modern standard approach.
-\end{itemize}
-\end{frame}
-
-
-\subsection{Model type 1: Varying intercepts models}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-\begin{itemize}
-\item
-The \textbf{linear mixed model} does something related to the above by-subject fits, but with some crucial twists, as we see below. 
-\item
-In the model shown in the next slide,  
-the statement 
-
-(1$\mid$subject) 
-
-adjusts the grand mean estimates of the intercept by a term (a number) for each subject.
-\end{itemize}
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-\textbf{Notice that we did not aggregate the data here.}
-
-<<>>=
-m0.lmer<-lmer(logrt~so+(1|subject),dat)
-@
-
-Abbreviated output:
-
-\begin{verbatim}
-Random effects:
- Groups   Name        Variance Std.Dev.
- subject  (Intercept) 0.09983  0.3160  
- Residual             0.14618  0.3823  
-Number of obs: 672, groups:  subject, 42
-
-Fixed effects:
-            Estimate Std. Error t value
-(Intercept)  5.88306    0.05094 115.497
-so           0.06202    0.01475   4.205
-\end{verbatim}
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-One thing to notice is that the coefficients (intercept and slope) of the fixed effects of the above model are identical to those in the linear model m0 above. 
-
-The varying intercepts for each subject can be viewed by typing:
-
-<<>>=
-ranef(m0.lmer)$subject[,1][1:10]
-@
-
-
-\end{frame}
-
-
-
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-
-Here is another way to summarize the adjustments to the grand mean intercept by subject. The error bars represent 95\% confidence intervals.
-
-<<eval=FALSE>>=
-library(lattice)
-print(dotplot(ranef(m0.lmer,condVar=TRUE)))
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-
-%\begin{center}
-%\includegraphics[height=6cm,width=6cm]{figure/caterpillarplot}
-%\end{center}
-
-<<echo=FALSE,fig.height=4>>=
-library(lattice)
-print(dotplot(ranef(m0.lmer,condVar=TRUE)))
-@
-
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-The model m0.lmer above prints out the following type of linear model.  i indexes subject, and j indexes items. 
-
-Once we know the subject id and the item id, we know which subject saw which condition:
-
-<<>>=
-subset(dat,subject==1 & item == 1)
-@
-
-
-\begin{equation}
-y_{ij} = \beta_0 + u_{0i}+\beta_1\times so_{ij} + \epsilon_{ij}
-\end{equation}
-
-The \textbf{only} new thing here is the by-subject adjustment to the intercept.
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-\begin{itemize}
-\item
-Note that these by-subject adjustments to the intercept $u_{0i}$ are assumed by lmer to come from a normal distribution centered around 0: 
-
-$u_{0i} \sim Normal(0,\sigma_{u0})$
-\item
-The ordinary linear model m0 has one intercept $\beta_0$ for all subjects, whereas the linear mixed model with varying intercepts m0.lmer has a different intercept ($\beta_0 + u_{0i}$) for each subject $i$.
-\item
-We can visualize the adjustments for each subject to the intercepts as shown below.
-\end{itemize}
-
-\end{frame}
-
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-<<echo=FALSE,fig.height=5>>=
-a<-fixef(m0.lmer)[1]
-newa<-a+ranef(m0.lmer)$subj
-
-ab<-data.frame(newa=newa,b=fixef(m0.lmer)[2])
-
-plot(dat$so,dat$logrt,xlab="condition",ylab="log rt",axes=F)
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-
-for(i in 1:42){
-abline(a=ab[i,1],b=ab[i,2])
+<<cache=TRUE>>=
+nsim<-10000
+params<-matrix(rep(NA,nsim*4),ncol=4)
+for(i in 1:nsim){
+  sim_dat<-withinsubj_simdat()
+  m<-lmer(rt~cond+(1|subj),sim_dat,
+          control=lmerControl(calc.derivs=FALSE))
+  params[i,1]<-summary(m)$coefficients[1,1]
+  params[i,2]<-summary(m)$coefficients[2,1]
+  params[i,3]<-sigma_e<-attr(VarCorr(m),"sc")
+  params[i,4]<-sigma_e<-attr(VarCorr(m)$subj,"stddev")
 }
-
-abline(lm(logrt~so,dat),lwd=3,col="red")
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Formal statement of varying intercepts linear mixed model}
-
-i indexes subjects, j items.
-
-\begin{equation}
-y_{ij} = \beta_0 + u_{0i}+(\beta_1)\times so_{ij} + \epsilon_{ij}
-\end{equation}
-
-Variance components:
-
-\begin{itemize}
-\item
-$u_0 \sim Normal(0,\sigma_{u0})$
-\item
-$\epsilon \sim Normal(0,\sigma)$
-\end{itemize}
-
-\end{frame}
-
-
-\subsection{Model type 2: Varying intercepts and slopes model (no correlation)}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-Note that, unlike the figure associated with the lmlist.fm1 model above, which also involves fitting separate models for each subject, the model m0.lmer assumes \textbf{different intercepts} for each subject \textbf{but the same slope}. 
-
-We can have lmer fit different intercepts AND slopes for each subject.
-
-\end{frame}
-
-
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-\framesubtitle{Varying intercepts and slopes by subject}
-
-We assume now that each subject's slope is also adjusted:
-
-\begin{equation}
-y_{ij} = \beta_0 + u_{0i}+(\beta_1+u_{1i})\times so_{ij} + \epsilon_{ij}
-\end{equation}
-
-That is, we additionally assume that $u_{1i} \sim Normal(0,\sigma_{u1})$.
-
-<<>>=
-m1.lmer<-lmer(logrt~so+(1+so||subject),dat)
-@
-
-\begin{verbatim}
-Random effects:
- Groups    Name        Variance Std.Dev.
- subject   (Intercept) 0.1006   0.317   
- subject.1 so          0.0121   0.110   
- Residual              0.1336   0.365   
-Number of obs: 672, groups:  subject, 42
-
-Fixed effects:
-            Estimate Std. Error t value
-(Intercept)   5.8831     0.0509  115.50
-so            0.0620     0.0221    2.81
-\end{verbatim}
-
-\end{frame}
-
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-These fits for each subject are visualized below (the red line shows the model with a single intercept and slope, i.e., our old model m0):
-
-<<echo=FALSE,fig.height=4>>=
-a<-fixef(m1.lmer)[1]
-b<-fixef(m1.lmer)[2]
-
-newa<-a+ranef(m1.lmer)$subject[1]
-newb<-b+ranef(m1.lmer)$subject[2]
-
-ab<-data.frame(newa=newa,b=newb)
-
-plot(dat$so,dat$logrt,xlab="condition",
-     ylab="log rt",axes=F,
-main="varying intercepts and slopes for each subject")
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-
-for(i in 1:42){
-abline(a=ab[i,1],b=ab[i,2])
-}
-
-abline(lm(logrt~so,dat),lwd=3,col="red")
 @
 
 \end{frame}
 
 
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-\framesubtitle{Comparing lmList model with varying intercepts model}
+\begin{frame}[fragile]\frametitle{Within-subjects parameter recovery}
 
-Compare this model with the lmlist.fm1 model we fitted earlier:
-
-<<echo=FALSE,fig.height=4>>=
-op<-par(mfrow=c(1,2),pty="s")
-
-plot(dat$so,dat$logrt,axes=F,xlab="condition",
-     ylab="log rt",main="ordinary linear model")
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-
-subjects<-1:42
-
-lmlistcoef<-coef(lmlist.fm1)
-a_lmlist<-lmlistcoef$`(Intercept)`
-b_lmlist<-lmlistcoef$so
-
-for(i in subjects){
-abline(a=a_lmlist[i],b=b_lmlist[i])
-}
-
-abline(lm(logrt~so,dat),lwd=3,col="red")
-
-a<-fixef(m1.lmer)[1]
-b<-fixef(m1.lmer)[2]
-
-newa<-a+ranef(m1.lmer)$subj[1]
-newb<-b+ranef(m1.lmer)$subj[2]
-
-ab<-data.frame(newa=newa,b=newb)
-
-plot(dat$so,dat$logrt,axes=F,
-main="varying intercepts and slopes",
-xlab="condition",ylab="log rt")
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-
-for(i in 1:42){
-abline(a=ab[i,1],b=ab[i,2])
-}
-
-abline(lm(logrt~so,dat),lwd=3,col="red")
-@
-
-\end{frame}
-
-
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-
-<<eval=FALSE>>=
-print(dotplot(ranef(m1.lmer,condVar=TRUE)))
+<<fig.height=4,echo=FALSE>>=
+op<-par(mfrow=c(2,2),pty="s")
+hist(params[,1],main="b0")
+abline(v=725)
+hist(params[,2],main="b1")
+abline(v=25)
+hist(params[,3],main="sigma")
+abline(v=300)
+hist(params[,4],main="sigma_u0")
+abline(v=200)
 @
 
 
 \end{frame}
 
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
+\begin{frame}[fragile]\frametitle{Within-subjects parameter recovery}
 
+So this linear mixed model is looking pretty OK in terms of parameter recovery.
 
-<<echo=FALSE,fig.height=4>>=
-print(dotplot(ranef(m1.lmer,condVar=TRUE)))
-@
-
-%\begin{center}
-%\includegraphics[height=7cm]{figure/caterpillarplot2}
-%\end{center}
+However, in some cases the $\sigma_{u0}$ parameter is not estimated accurately.   
 
 \end{frame}
-
-\begin{frame}[fragile]\frametitle{Formal statement of varying intercepts and varying slopes linear mixed model}
-
-i indexes subjects, j items.
-
-\begin{equation}
-y_{ij} = \beta_0 + u_{0i}+(\beta_1+u_{1i})\times so_{ij} + \epsilon_{ij}
-\end{equation}
-
-Variance components:
-
-\begin{itemize}
-\item
-$u_0 \sim Normal(0,\sigma_{u0})$
-\item
-$u_1 \sim Normal(0,\sigma_{u1})$
-\item
-$\epsilon \sim Normal(0,\sigma)$
-\end{itemize}
-
-\end{frame}
-
-
-\subsection{Shrinkage in linear mixed models}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-
-\begin{itemize}
-\item
-The estimate of the effect by participant is smaller than when we fit a separate linear model to the subject's data. 
-\item
-This is called shrinkage in linear mixed models: the individual level estimates are shunk towards the mean slope.
-\item
-The less data we have from a given subject, the more the shrinkage.
-\end{itemize}
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-
-<<echo=FALSE,fig.height=5>>=
-op<-par(mfrow=c(1,3),pty="s")
-coefs<-coef(lmlist.fm1)
-intercepts<-coefs[1]
-colnames(intercepts)<-"intercept"
-slopes<-coefs[2]
-
-plot(jitter(dat$so,.5),
-        dat$logrt,axes=FALSE,
-        xlab="Condition",ylab="rt (log ms)",
-        main="Subject 28's estimates")
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-## no pooling estimate:
-abline(intercepts$intercept[28],slopes$so[28])
-## partial pooling
-u<-ranef(m1.lmer)$subject
-u0<-u$`(Intercept)`
-u1<-u$so
-b0<-summary(m1.lmer)$coefficients[1,1]
-b1<-summary(m1.lmer)$coefficients[2,1]
-
-abline(b0+u0[28],b1+u1[28],lty=2)
-## complete pooling:
-abline(lm(log(rawRT)~so,dat),lwd=3,col="red")
-
-plot(jitter(dat$so,.5),
-        log(dat$rawRT),axes=FALSE,
-        xlab="Condition",ylab="rt (log ms)",
-        main="Subject 36's estimates")
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-
-## no pooling estimate:
-abline(intercepts$intercept[36],slopes$so[36])
-## partial pooling:
-abline(b0+u0[36],b1+u1[36],lty=2)
-## complete pooling:
-abline(lm(log(rawRT)~so,dat),lwd=3,col="red")
-
-plot(jitter(dat$so,.5),
-        log(dat$rawRT),axes=FALSE,
-        xlab="Condition",ylab="rt (log ms)",
-        main="Subject 37's estimates")
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-## no pooling estimate:
-abline(intercepts$intercept[37],slopes$so[37])
-## partial pooling:
-abline(b0+u0[37],b1+u1[37],lty=2)
-## complete pooling:
-abline(lm(log(rawRT)~so,dat),lwd=3,col="red")
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-Let's randomly delete some data from one subject:
-<<>>=
-set.seed(4321)
-## choose some data randomly to remove:
-rand<-rbinom(1,n=16,prob=0.5)
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-<<>>=
-dat[which(dat$subject==37),]$rawRT
-dat$deletedRT<-dat$rawRT
-dat[which(dat$subject==37),]$deletedRT<-
-  ifelse(rand,NA,
-         dat[which(dat$subject==37),]$rawRT)
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-Now subject 37's estimates are going to be pretty wild:
-
-<<>>=
-subset(dat,subject==37)$deletedRT
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-<<>>=
-## original no pooling estimate:
-lmList.fm1_old<-lmList(log(rawRT)~so|subject,dat)
-coefs_old<-coef(lmList.fm1_old)
-intercepts_old<-coefs_old[1]
-colnames(intercepts_old)<-"intercept"
-slopes_old<-coefs_old[2]
-## subject 37's original estimates:
-intercepts_old$intercept[37]
-slopes_old$so[37]
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-<<>>=
-## on deleted data:
-lmList.fm1_deleted<-lmList(log(deletedRT)~so|subject,dat)
-coefs<-coef(lmList.fm1_deleted)
-intercepts<-coefs[1]
-colnames(intercepts)<-"intercept"
-slopes<-coefs[2]
-## subject 37's new estimates on deleted data:
-intercepts$intercept[37]
-slopes$so[37]
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-%Now fit the hierarchical model and examine subject 37's estimates on undeleted vs deleted data:
-
-<<echo=FALSE,fig.height=5>>=
-plot(jitter(dat$so,.5),
-        log(dat$rawRT),axes=FALSE,
-        xlab="Condition",ylab="rt (log ms)",
-        main="Subject 37's estimates",ylim=c(4.5,9))
-axis(1,at=c(-1,1),labels=c("SR","OR"))
-axis(2)
-
-## deleted data estimate lmList:
-abline(intercepts$intercept[37],slopes$so[37])
-## original data estimate lmList:
-abline(intercepts_old$intercept[37],slopes_old$so[37],lwd=4)
-
-## partial pooling, original data:
-u0_old<-u0
-u1_old<-u1
-b0_old<-b0
-b1_old<-b1
-
-m1.lmer_deleteddata<-lmer(log(deletedRT)~so + (1+so||subject),dat)
-b0<-summary(m1.lmer_deleteddata)$coefficients[1,1]
-b1<-summary(m1.lmer_deleteddata)$coefficients[2,1]
-u<-ranef(m1.lmer_deleteddata)$subject
-u0<-u$`(Intercept)`
-u1<-u$`so`
-
-## LMM on deleted data:
-abline(b0+u0[37],b1+u1[37],lty=2,col="red",lwd=1)
-## LMM on original data:
-abline(b0_old+u0_old[37],b1_old+u1_old[37],lty=2,col="red",lwd=3)
-
-## complete pooling:
-abline(lm(log(rawRT)~so,dat),lwd=3,col="orange")
-
-legend(x=-1,y=9,
-       lty=c(1,1,2,2,1),
-       lwd=c(1,4,1,2,3),
-       col=c("black","black","red","red","orange"),
-       legend=c("lmList (no pooling) deleted data",
-                "lmList (no pooling) original data",
-                "lmer (partial pooling) deleted data",
-                "lmer (partial pooling) original data",
-                "linear model (complete pooling) original data"))
-
-@
-
-\end{frame}
-
-
-\begin{frame}[fragile]\frametitle{Shrinkage in linear mixed models}
-\framesubtitle{The effect of missing data on estimation in LMMs}
-
-\begin{itemize}
-\item
-What we see here is that the estimates from the hierarchical model are barely affected by the missingness, but the estimates from the no-pooling model are heavily affected.
-\item
-This means that linear mixed models will give you more robust estimates (think Type M error!) compared to no pooling models.
-\item
-This is one reason why linear mixed models are such a big deal. 
-\end{itemize}
-
-\end{frame}
-
-\subsection{Varying intercepts and slopes model, with crossed random effects for subjects and for items}
-
-\begin{frame}[fragile]\frametitle{Crossed subjects and items in LMMs}
-
-Subjects and items are fully crossed:
-
-<<>>=
-head(xtabs(~subject+item,dat))
-@
-
-\end{frame}
-
-
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-Linear mixed model with crossed subject and items random effects.
-
-<<>>=
-m2.lmer<-lmer(logrt~so+(1+so||subject)+(1+so||item),dat)
-@
-
-\end{frame}
-
-
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-\begin{verbatim}
-Random effects:
- Groups    Name        Variance Std.Dev.
- subject   (Intercept) 0.10090  0.3177  
- subject.1 so          0.01224  0.1106  
- item      (Intercept) 0.00127  0.0356  
- item.1    so          0.00162  0.0402  
- Residual              0.13063  0.3614  
-Number of obs: 672, groups:  subject, 42; item, 16
-
-Fixed effects:
-            Estimate Std. Error t value
-(Intercept)   5.8831     0.0517  113.72
-so            0.0620     0.0242    2.56
-\end{verbatim}
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-
-<<echo=FALSE,fig.height=4>>=
-print(dotplot(ranef(m2.lmer,condVar=TRUE))$subject)
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-
-<<echo=FALSE,fig.height=4>>=
-print(dotplot(ranef(m2.lmer,condVar=TRUE))$item)
-@
-
-\end{frame}
-
-\subsection{Model type 3: Varying intercepts and varying slopes, with correlation}
-
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-Linear mixed model with crossed subject and items random effects.
-
-<<>>=
-m3.lmer<-lmer(logrt~so+(1+so|subject)+(1+so|item),
-              dat)
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Linear mixed models}
-
-Linear mixed model with crossed subject and items random effects.
-
-\begin{verbatim}
-Random effects:
- Groups   Name        Variance Std.Dev. Corr
- subject  (Intercept) 0.10103  0.3178       
-          so          0.01228  0.1108   0.58
- item     (Intercept) 0.00172  0.0415       
-          so          0.00196  0.0443   1.00 <= degenerate
- Residual             0.12984  0.3603       
-Number of obs: 672, groups:  subject, 42; item, 16
-
-Fixed effects:
-            Estimate Std. Error t value
-(Intercept)   5.8831     0.0520  113.09
-so            0.0620     0.0247    2.51
-\end{verbatim}
-
-\end{frame}
-
-
-\begin{frame}[fragile]\frametitle{Formal statement of varying intercepts and varying slopes linear mixed model with correlation}
-
-i indexes subjects, j items.
-
-\begin{equation}
-y_{ij} = \alpha + u_{0i} + w_{0j} + (\beta + u_{1i} + w_{1j}) * so_{ij} + \varepsilon_{ij}
-\end{equation}
-
-where $\varepsilon_{ij} \sim Normal(0,\sigma)$ and 
-
-\begin{equation}\label{eq:covmat2}
-\Sigma _u
-=
-\begin{pmatrix}
-\sigma _{u0}^2  & \rho _{u}\sigma _{u0}\sigma _{u1}\\
-\rho _{u}\sigma _{u0}\sigma _{u1}    & \sigma _{u1}^2\\
-\end{pmatrix}
-\quad 
-\Sigma _w
-=
-\begin{pmatrix}
-\sigma _{w0}^2  & \rho _{w}\sigma _{w0}\sigma _{w1}\\
-\rho _{w}\sigma _{w0}\sigma _{w1}    & \sigma _{w1}^2\\
-\end{pmatrix}
-\end{equation}
-
-\begin{equation}\label{eq:jointpriordist2}
-\begin{pmatrix}
-  u_0 \\ 
-  u_1 \\
-\end{pmatrix}
-\sim 
-\mathcal{N} \left(
-\begin{pmatrix}
-  0 \\
-  0 \\
-\end{pmatrix},
-\Sigma_{u}
-\right),
-\quad
-\begin{pmatrix}
-  w_0 \\ 
-  w_1 \\
-\end{pmatrix}
-\sim 
-\mathcal{N}\left(
-\begin{pmatrix}
-  0 \\
-  0 \\
-\end{pmatrix},
-\Sigma_{w}
-\right)
-\end{equation}
-
-\end{frame}
-
-
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-
-<<echo=FALSE,fig.height=4>>=
-print(dotplot(ranef(m3.lmer,condVar=TRUE))$subject)
-@
-
-\end{frame}
-
-\begin{frame}[fragile]\frametitle{Visualizing random effects}
-\framesubtitle{These are degenerate estimates}
-
-<<echo=FALSE,fig.height=4>>=
-print(dotplot(ranef(m3.lmer,condVar=TRUE))$item)
-@
-
-\end{frame}
-
-
-
 \end{document}
