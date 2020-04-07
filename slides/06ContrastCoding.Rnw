@@ -67,35 +67,516 @@ http://www.ling.uni-potsdam.de/$\sim$vasishth
 library(knitr)
 library(coda)
 
+library(knitr)
+library(xtable)
+library(papaja)
+#library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+#library(sjPlot)
+library(png)
 # set global chunk options, put figures into folder
 options(replace.assign=TRUE,show.signif.stars=FALSE)
 opts_chunk$set(fig.path='figures/figure-', fig.align='center', fig.show='hold')
 options(replace.assign=TRUE,width=75)
 opts_chunk$set(dev='postscript')
-#library(rstan)
-#set.seed(9991)
-# save workspace image, if you want
-#the.date <- format(Sys.time(), "%b%d%Y")
-#save.image(file=paste0("homework01-",the.date,".RData")
+@
+
+\section{Introduction}
+
+\begin{frame}\frametitle{The goals of this lecture}
+
+Goals of this  lecture:
+
+\begin{itemize}
+\item Understand contrast coding for two condition experiments.
+\item Learn different (custom) contrast codings for more complex designs.
+\end{itemize}
+
+
+\end{frame}
+
+\begin{frame}\frametitle{Typical experiment designs}
+
+\begin{itemize}
+\item Two conditions: $1\times 2$ ``factorial design''
+\item Three conditions: $1\times 3$ ``factorial design''
+\item Four  conditions: typically $2\times 2$ factorial design, sometimes $1\times 4$
+\item More complex designs like $2\times 3$, $2\times 2\times 2$, etc.
+\end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{Typical experiment designs}
+
+\begin{itemize}
+\item
+Beginners tend to go wild with factorial designs, and sometimes want hundreds of conditions. 
+\item
+We will not go beyond  $2\times 2$.
+\item 
+My  advice for your own work is to keep it simple: four conditions maximum.
+\item Sometimes one has to go beyond such simple designs, but do that only if you really understand that you are introducing possibly intractable complexity in the design (this will be discussed later, lectures on simulating data).
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<>>=
+library(dplyr)
+# load mixedDesign function for simulating data
+source("functions/mixedDesign.v0.6.3.R")
+M <- matrix(c(0.8, 0.4), nrow=2, ncol=1, byrow=FALSE)
+set.seed(1) 
+# set seed of random number generator for replicability
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<>>=
+simdat <- mixedDesign(B=2, W=NULL, n=5, 
+                      M=M,  SD=.20, long = TRUE) 
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<>>=
+names(simdat)[1] <- "F"  # Rename B_A to F(actor)
+levels(simdat$F) <- c("F1", "F2")
+head(simdat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<>>=
+str(simdat)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<>>=
+table1 <- simdat %>% group_by(F) %>% # Table for main effect F
+   summarize(N=n(), M=mean(DV), SD=sd(DV), SE=SD/sqrt(N) )
+table1
+@
+
+<<>>=
+(GM <-  mean(table1$M)) # Grand Mean
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<echo=FALSE,fig.height=4>>=
+(plot1 <- qplot(x=F, y=M, group=1, data=table1, geom=c("point", "line")) + 
+	 geom_errorbar(aes(max=M+SE, min=M-SE), width=0) + 
+   #scale_y_continuous(breaks=c(250,275,300)) + 
+   scale_y_continuous(breaks=seq(0,1,.2)) + coord_cartesian(ylim=c(0,1)) + 
+   labs(y="Mean Response Time [sec]", x="Factor F") +
+   theme_apa())
+@
+\end{frame}
+
+
+
+\section{Treatment contrasts}
+
+\begin{frame}[fragile]\frametitle{Treatment contrasts}
+
+<<>>=
+m_F <- lm(DV ~ F, simdat)
+round(summary(m_F)$coef,3)
+@
+
+\begin{equation}
+\begin{array}{lcl}
+\text{Intercept} = & \hat{\mu}_1 & = \text{estimated mean for \texttt{F1}} \\
+\text{Slope (\texttt{FF2})} = & \hat{\mu}_2 - \hat{\mu}_1 & = \text{estim. mean for \texttt{F2}} - \text{estim. mean for \texttt{F1}} 
+\end{array}
+\label{def:beta}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Treatment contrasts}
+
+<<>>=
+contrasts(simdat$F)
+@
+
+The \textsc{treatment contrast} expresses the null hypothesis that the difference in means between the two levels of the factor F is $0$; formally, the null hypothesis $H_0$ is that $H_0: \; \beta_1 = 0$:
+\begin{equation}
+H_0: - 1 \cdot \mu_{F1} + 1 \cdot \mu_{F2} = 0
+\end{equation}
+
+or equivalently:
+
+\begin{equation} \label{eq:f2minusf1}
+H_0: \mu_{F2} - \mu_{F1} = 0
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Treatment contrasts}
+
+The intercept in the \textsc{treatment contrast} expresses a null hypothesis that is usually of no interest: that the mean in condition F1 of the factor F is $0$.
+Formally, the null hypothesis is $H_0: \; \beta_0 = 0$: 
+
+\begin{equation} \label{eq:trmtcontrfirstmention}
+H_0: 1 \cdot \mu_{F1} + 0 \cdot \mu_{F2} = 0
+\end{equation}
+
+\noindent
+or equivalently:
+
+\begin{equation}
+H_0: \mu_{F1} = 0 .
+\end{equation}
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Treatment contrasts}
+
+Level-ordering is alphabetical and can be changed:
+
+<<>>=
+simdat$Fb <- factor(simdat$F,  levels = c("F2","F1"))
+contrasts(simdat$Fb)
+@
+
+\end{frame}
+
+\section{Sum contrasts}
+
+\begin{frame}[fragile]\frametitle{Sum contrasts}
+
+<<>>=
+(contrasts(simdat$F) <- c(-0.5,+0.5))
+m1_mr <- lm(DV ~ F, simdat)
+summary(m1_mr)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Sum contrasts}
+
+\begin{equation}
+\begin{array}{lcl}
+\text{Intercept} = & (\hat{\mu}_1 + \hat{\mu}_2)/2 & = \text{estimated mean of \texttt{F1} and \texttt{F2}} \\
+\text{Slope (\texttt{F1})} = & \hat{\mu}_2 - \hat{\mu}_1 & = \text{estim. mean for \texttt{F2}} - \text{estim. mean for \texttt{F1}} 
+\end{array}
+\label{def:beta2}
+\end{equation}
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Sum contrasts}
+
+Sum contrasts express the null hypothesis that the difference in means between the two levels of factor F is 0; formally, the null hypothesis $H_0$ is that 
+
+\begin{equation}
+H_0: -1 \cdot \mu_{F1} + 1 \cdot \mu_{F2} = 0
+\end{equation}
+
+\noindent
+This is the same hypothesis that was also tested by the slope in the treatment contrast.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Sum contrasts}
+
+
+The intercept, however, now expresses a different hypothesis about the data: it expresses the null hypothesis that the average of the two conditions F1 and F2 is 0:
+
+\begin{equation}
+H_0: 1/2 \cdot \mu_{F1} + 1/2 \cdot \mu_{F2} = \frac{\mu_{F1} + \mu_{F2}}{2} = 0
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Summary: Treatment and sum contrasts}
+
+\begin{itemize}
+\item
+To summarize, \textsc{treatment contrasts} and \textsc{sum contrasts} are two possible ways to parameterize the difference between two groups; they test different hypotheses. 
+\item
+\textsc{Treatment contrasts} compare one or more means against a baseline condition, whereas \textsc{sum contrasts} allow us to determine whether we can reject the null hypothesis that a condition's mean is the same as the GM (in the two-group case, this also implies a hypothesis test that the two group means are the same).
+\end{itemize}
+
+\end{frame}
+
+\section{Three-level factors}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+
+<<>>=
+M <- matrix(c(500, 450, 400), 
+            nrow=3, ncol=1, byrow=FALSE)
+set.seed(1)
+simdat2 <- mixedDesign(B=3, W=NULL, 
+                       n=4, M=M,  SD=20, long = TRUE) 
+names(simdat2)[1] <- "F"  # Rename B_A to F(actor)/F(requency)
+levels(simdat2$F) <- c("low", "medium", "high")
+simdat2$DV <- round(simdat2$DV)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+
+<<>>=
+head(simdat2)
+table.word <- simdat2 %>% group_by(F) %>% 
+  summarise(N = length(DV), M = mean(DV), 
+            SD = sd(DV), SE = sd(DV)/sqrt(N))
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+
+\tiny
+<<>>=
+table.word1 <- table.word
+names(table.word1) <- c("Factor F","N data points","Estimated means",
+                        "Standard deviations","Standard errors")
+table.word1
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+
+The estimated means reflect our assumptions about the true means in the data simulation: Response times decrease with increasing word frequency. 
+
+<<>>=
+aovF <- aov(DV ~ F + Error(id), data=simdat2)
+summary(aovF)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+\framesubtitle{Sum contrasts}
+
+Define three hypotheses to test:
+
+\begin{equation}
+H_{0_0}: \frac{\mu_1 + \mu_2 + \mu_3}{3} = 0 
+\end{equation}
+
+\begin{equation}
+H_{0_1}: \mu_1 = \frac{\mu_1+\mu_2+\mu_3}{3} = GM
+\end{equation}
+
+\noindent
+and
+
+\begin{equation}
+H_{0_2}: \mu_2 = \frac{\mu_1+\mu_2+\mu_3}{3} = GM
+\end{equation}
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+\framesubtitle{Sum contrasts}
+
+$H_{0_0}$ can be written as:
+
+\begin{equation}
+H_{0_0}: \frac{1}{3} \mu_1 + \frac{1}{3}\mu_2 + \frac{1}{3}\mu_3 = 0
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+\framesubtitle{Sum contrasts}
+
+$H_{0_1}$ can be written as:
+
+\begin{align} \label{h01}
+& \mu_1 =\frac{\mu_1+\mu_2+\mu_3}{3}\\
+\Leftrightarrow & \mu_1 - \frac{\mu_1+\mu_2+\mu_3}{3} = 0\\
+\Leftrightarrow & \frac{2}{3} \mu_1 - \frac{1}{3}\mu_2 - \frac{1}{3}\mu_3 = 0
+\end{align}
+
+Here, the weights $2/3, -1/3, -1/3$ are informative about how to combine the condition means to define the null hypothesis.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+\framesubtitle{Sum contrasts}
+
+
+$H_{0_2}$ can be rewritten as:
+
+\begin{align}\label{h02}
+&  \mu_2 = \frac{\mu_1+\mu_2+\mu_3}{3}\\
+\Leftrightarrow & \mu_2 - \frac{\mu_1+\mu_2+\mu_3}{3} = 0 \\
+\Leftrightarrow & -\frac{1}{3}\mu_1 + \frac{2}{3} \mu_2 - \frac{1}{3} \mu_3 = 0
+\end{align}
+
+Here, the weights are $-1/3, 2/3, -1/3$, and they again indicate how to combine the condition means for defining the null hypothesis.
+
+\end{frame}
+
+\section{The hypothesis matrix and the  contrast matrix}
+
+\begin{frame}[fragile]\frametitle{The hypothesis matrix}
+
+We can write the hypotheses in two columns  of a matrix:
+
+<<>>=
+HcSum <- rbind(cH00=c(low= 1/3, med= 1/3, hi= 1/3), 
+               cH01=c(low=+2/3, med=-1/3, hi=-1/3), 
+               cH02=c(low=-1/3, med=+2/3, hi=-1/3))
+fractions(t(HcSum))
 @
 
 
-\begin{frame}\frametitle{Treatment contrasts}
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The hypothesis matrix}
+
+The generalized inverse:
+
+<<>>=
+ginv2 <- function(x) # define a function to make the output nicer
+  fractions(provideDimnames(ginv(x),base=dimnames(x)[2:1]))
+@
 
 \end{frame}
 
-\begin{frame}\frametitle{Sum contrasts}
+\begin{frame}[fragile]\frametitle{The hypothesis matrix}
+
+Take the generalized inverse  of the hypothesis matrix:
+
+\small
+<<>>=
+(XcSum <- ginv2(HcSum))
+@
+
+Compare the second  and third columns of the inverse of the hypothesis matrix with the sum contrast matrix:
+
+<<>>=
+contr.sum(3)
+@
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The hypothesis matrix}
+
+<<>>=
+contrasts(simdat2$F) <- XcSum[,2:3]
+## same as:
+#contrasts(simdat2$F) <- contr.sum(3)
+m1_mr <- lm(DV ~ F, data=simdat2)
+@
 
 \end{frame}
 
-\begin{frame}\frametitle{Sliding contrasts}
+\begin{frame}[fragile]\frametitle{The hypothesis matrix}
+
+<<>>=
+summary(m1_mr)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The procedure}
+
+From the hypothesis matrix to the contrast matrix:
+
+\begin{itemize}
+\item Write down the hypotheses
+\item Extract the weights and write them into a \textbf{hypothesis matrix} as shown above
+\item Apply the \textbf{generalized matrix inverse} to the hypothesis matrix to create the contrast matrix
+\item Assign the contrast matrix (here, contr.sum(3)) to the factor and run the linear model
+\end{itemize}
+
+\end{frame}
+
+\section{Repeated difference contrasts}
+
+\begin{frame}[fragile]\frametitle{Repeated difference contrasts}
+
+<<>>=
+fractions(contr.sdif(3))
+@
+
+Compares med to low, and high to low frequency.
+
+<<>>=
+## med vs low
+table.word$M[2]-table.word$M[1]
+## high vs med
+table.word$M[3]-table.word$M[2]
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Repeated difference contrasts}
+
+<<>>=
+contrasts(simdat2$F) <- contr.sdif(3)
+m1_mr <- lm(DV ~ F, data=simdat2)
+summary(m1_mr)$coefficients
+@
+
+\end{frame}
+
+\section{Further details}
+
+\begin{frame}\frametitle{To learn more}
+
+Work through:
+
+Daniel J. Schad, Sven Hohenstein, Shravan Vasishth, and Reinhold Kliegl. How to capitalize on a priori contrasts in linear (mixed) models: A tutorial. Journal of Memory and Language, 110, 2020.
+
+
+\end{frame}
+
+\end{document}
+
+\begin{frame}\frametitle{Helmert contrasts}
+
+<<>>=
+contr.helmert(3)
+@
+
+Compares low with med frequency, and the mean of low and med with high frequency.
+
+<<>>=
+## med vs low
+table.word$M[3]-table.word$M[2])
+## mean(low,med) vs high
+mean(table.word$M[1],table.word$M[2])-table.word$M[3]
+@
 
 \end{frame}
 
 \begin{frame}\frametitle{Helmert contrasts}
 
+<<>>=
+contrasts(simdat2$F) <- contr.helmert(3)
+m1_mr <- lm(DV ~ F, data=simdat2)
+summary(m1_mr)$coefficients
+@
+
+
 \end{frame}
 
-\end{document}
 
 
