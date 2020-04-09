@@ -66,8 +66,8 @@ http://www.ling.uni-potsdam.de/$\sim$vasishth
 <<setup,include=FALSE,cache=FALSE>>=
 library(knitr)
 library(coda)
+library(lme4)
 
-library(knitr)
 library(xtable)
 library(papaja)
 #library(tidyverse)
@@ -91,7 +91,7 @@ Goals of this  lecture:
 
 \begin{itemize}
 \item Understand contrast coding for two condition experiments.
-\item Learn different (custom) contrast codings for more complex designs.
+\item Learn different (custom) contrast codings for more complex designs, such as $2\times 2$ factorial designs.
 \end{itemize}
 
 
@@ -117,6 +117,18 @@ We will not go beyond  $2\times 2$.
 \item 
 My  advice for your own work is to keep it simple: four conditions maximum.
 \item Sometimes one has to go beyond such simple designs, but do that only if you really understand that you are introducing possibly intractable complexity in the design (this will be discussed later, lectures on simulating data).
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}\frametitle{Typical experiment designs}
+
+\begin{itemize}
+\item A classic beginner mistake is to design an experiment without any clear hypotheses in mind.
+\item After the data come in, we start doing different pairwise comparisons.
+\item A better way: develop an analysis plan in advance using simulated data. 
+\item Define \textit{a priori} comparisons.
+\item Pre-registration is a useful tool (to be discussed later).
 \end{itemize}
 
 \end{frame}
@@ -537,6 +549,194 @@ summary(m1_mr)$coefficients
 
 \end{frame}
 
+\section{Two-by-two factorial designs}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+<<>>=
+set.seed(1)
+M <- matrix(c(10, 20, 10, 40), nrow=4, ncol=1, byrow=FALSE)
+simdat4 <- mixedDesign(B=c(2,2), W=NULL, 
+                       n=5, M=M,  SD=10, 
+                       long = TRUE) 
+names(simdat4)[1:2] <- c("A","B")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+<<>>=
+table4 <- simdat4 %>% group_by(A, B) %>% # plot interaction
+    summarize(N=length(DV), 
+              M=mean(DV), SD=sd(DV), SE=SD/sqrt(N))
+GM <-  mean(table4$M) # Grand Mean
+
+table4a <- table4
+names(table4a) <- c("Factor A","Factor B",
+                    "N data","Means","Std. dev.","Std. errors")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+\small
+<<>>=
+table4a
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+<<echo=FALSE,fig.height=4>>=
+(plot2 <- qplot(x=A, y=M, group=B, linetype=B, shape=B, data=table4, geom=c("point", "line")) + 
+   labs(y="Dependent variable", x="Factor A", colour="Factor B", linetype="Factor B", shape="Factor B")+
+	 geom_errorbar(aes(max=M+SE, min=M-SE), width=0) ) +theme_bw()
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+\small
+<<>>=
+# ANOVA: B_A(2) times B_B(2)
+m2_aov <- aov(DV ~ A*B + Error(id), data=simdat4)
+summary(m2_aov)
+
+# MR: B_A(2) times B_B(2)
+m2_mr <- lm(DV ~ A*B, data=simdat4)
+summary(m2_mr)$coefficients
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+The discrepancy between ANOVA and lm arises from the default treatment contrast coding in R, which lm uses but aov does not:
+
+<<>>=
+contrasts(simdat4$A)
+contrasts(simdat4$B)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+ANOVA uses sum contrasts, and we can force lm to do this too:
+
+<<>>=
+# define sum contrasts:
+contrasts(simdat4$A) <- contr.sum(2)
+contrasts(simdat4$B) <- contr.sum(2)
+m2_mr.sum <- lm(DV ~ A*B, data=simdat4)
+summary(m2_mr.sum)$coefficients
+@
+
+\end{frame}
+
+\section{Hypothesis matrices and contrast matrices using the hypr package}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+
+Read the hypr package vignette for examples on how to use it:
+
+<<eval=FALSE>>=
+library(hypr)
+vignette("hypr-intro", package = "hypr")
+vignette("hypr-regression", package = "hypr")
+@
+
+\end{frame}
+
+\section{How I use contrast coding}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+\begin{itemize}
+\item I strongly believe that experiment designs should be kept simple. $2\times 2\times 2$ is too complex for my taste.
+\item However, sometimes complex designs are unavoidable. In that case, I generally set up sum contrasts for ANOVA-style analyses, or nested contrasts (or both).
+\item For examples, see any of my papers from 2013 onwards.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+\begin{itemize}
+\item
+I never use the contr.sum() etc. functions. I define my own contrast coding columns in the design matrix.
+\item
+This becomes relevant in linear mixed models.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+
+<<>>=
+persian<-read.table("data/Persiane1crit.txt")
+xtabs(~dist+distance,persian)
+xtabs(~pred+predability,persian)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+
+<<>>=
+contrasts(persian$distance)<-contr.sum(2)
+contrasts(persian$predability)<-contr.sum(2)
+m<-lmer(rt~distance*predability+(1+distance*predability||subj)+(1+distance*predability||item),persian)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+
+\tiny
+Correlations should not have been computed:
+<<>>=
+summary(m)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+Using my own contrast coding vectors:
+
+<<>>=
+m2<-lmer(rt~dist*pred+(1+dist*pred||subj)+(1+dist*pred||item),persian)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+\tiny
+Correlations are not computed, as expected:
+<<>>=
+summary(m2)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{How I use contrast coding}
+
+\begin{itemize}
+\item I prefer to define my own contrasts by hand because then I don't get spurious correlations in the random effects, as illustrated above.
+\item As far as I know, it's not harmful to have those correlations. So maybe this is just a minor technical point.
+\end{itemize}
+
+
+\end{frame}
 \section{Further details}
 
 \begin{frame}\frametitle{To learn more}
@@ -550,33 +750,6 @@ Daniel J. Schad, Sven Hohenstein, Shravan Vasishth, and Reinhold Kliegl. How to 
 
 \end{document}
 
-\begin{frame}\frametitle{Helmert contrasts}
-
-<<>>=
-contr.helmert(3)
-@
-
-Compares low with med frequency, and the mean of low and med with high frequency.
-
-<<>>=
-## med vs low
-table.word$M[3]-table.word$M[2])
-## mean(low,med) vs high
-mean(table.word$M[1],table.word$M[2])-table.word$M[3]
-@
-
-\end{frame}
-
-\begin{frame}\frametitle{Helmert contrasts}
-
-<<>>=
-contrasts(simdat2$F) <- contr.helmert(3)
-m1_mr <- lm(DV ~ F, data=simdat2)
-summary(m1_mr)$coefficients
-@
-
-
-\end{frame}
 
 
 
