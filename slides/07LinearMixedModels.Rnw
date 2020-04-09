@@ -286,7 +286,7 @@ m0.lmer<-lmer(logrt~so+(1|subject),dat)
 @
 
 Abbreviated output:
-
+\small
 \begin{verbatim}
 Random effects:
  Groups   Name        Variance Std.Dev.
@@ -445,7 +445,7 @@ That is, we additionally assume that $u_{1i} \sim Normal(0,\sigma_{u1})$.
 <<>>=
 m1.lmer<-lmer(logrt~so+(1+so||subject),dat)
 @
-
+\small
 \begin{verbatim}
 Random effects:
  Groups    Name        Variance Std.Dev.
@@ -824,7 +824,7 @@ m2.lmer<-lmer(logrt~so+(1+so||subject)+(1+so||item),dat)
 
 
 \begin{frame}[fragile]\frametitle{Linear mixed models}
-
+\small
 \begin{verbatim}
 Random effects:
  Groups    Name        Variance Std.Dev.
@@ -864,19 +864,152 @@ print(dotplot(ranef(m2.lmer,condVar=TRUE))$item)
 
 \begin{frame}[fragile]\frametitle{Linear mixed models}
 
-Linear mixed model with crossed subject and items random effects.
+Linear mixed model with crossed subject and items random effects, with a correlation between varying intercepts and slopes.
 
 <<>>=
 m3.lmer<-lmer(logrt~so+(1+so|subject)+(1+so|item),
               dat)
 @
 
+To understand what this model is doing, we have to understand what a bivariate/multivariate distribution is.
+
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Linear mixed models}
 
 Linear mixed model with crossed subject and items random effects.
+\small
+\begin{verbatim}
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr
+ subject  (Intercept) 0.10103  0.3178       
+          so          0.01228  0.1108   0.58
+ item     (Intercept) 0.00172  0.0415       
+          so          0.00196  0.0443   1.00 <= degenerate
+ Residual             0.12984  0.3603       
+Number of obs: 672, groups:  subject, 42; item, 16
 
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept)   5.8831     0.0520  113.09
+so            0.0620     0.0247    2.51
+\end{verbatim}
+
+\end{frame}
+
+
+\subsection{Aside: Bivariate/multivariate distributions}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+Here are two uncorrelated normal random variables $u_0$ and $u_1$, both come from a Normal(0,1) distribution:
+
+<<echo=FALSE,fig.height=4>>=
+library(mvtnorm)
+u0 <- u1 <- seq(from = -3, to = 3, length.out = 30)
+Sigma1<-diag(2)
+f <- function(u0, u1) dmvnorm(cbind(u0, u1), mean = c(0, 0),sigma = Sigma1)
+z <- outer(u0, u1, FUN = f)
+persp(u0, u1, z, theta = -30, phi = 30, ticktype = "detailed")
+@
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+Here is an example of positively correlated bivariate random variables: 
+
+<<echo=FALSE,fig.height=4>>=
+Sigma2<-matrix(c(1,.6,.6,1),byrow=FALSE,ncol=2)
+f <- function(u0, u1) dmvnorm(cbind(u0, u1), mean = c(0, 0),sigma = Sigma2)
+z <- outer(u0, u1, FUN = f)
+persp(u0, u1, z, theta = -30, phi = 30, ticktype = "detailed")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+And here is an example with a negative correlation:
+
+<<echo=FALSE,fig.height=4>>=
+Sigma3<-matrix(c(1,-.6,-.6,1),byrow=FALSE,ncol=2)
+f <- function(u0, u1) dmvnorm(cbind(u0, u1), mean = c(0, 0),sigma = Sigma3)
+z <- outer(u0, u1, FUN = f)
+persp(u0, u1, z, theta = -30, phi = 30, ticktype = "detailed")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+A bivariate distribution for two random variables $u_0$ and $u_1$, each of which comes from a normal distribution, is written as follows:
+
+\begin{equation}\label{eq:covmat2}
+\Sigma
+=
+\begin{pmatrix}
+\sigma _{u0}^2  & \rho _{u}\sigma _{u0}\sigma _{u1}\\
+\rho _{u}\sigma _{u0}\sigma _{u1}    & \sigma _{u1}^2\\
+\end{pmatrix}
+\end{equation}
+
+\begin{equation}\label{eq:jointpriordist2}
+\begin{pmatrix}
+  u_0 \\ 
+  u_1 \\
+\end{pmatrix}
+\sim 
+\mathcal{N}_2 \left(
+\begin{pmatrix}
+  0 \\
+  0 \\
+\end{pmatrix},
+\Sigma
+\right)
+\end{equation}
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+\begin{itemize}
+\item
+$\Sigma$ is called a variance-covariance matrix. It contains the standard deviations and correlation between the two random variables.
+\item
+In a multivariate distribution with, say, three random variables, we would have three standard deviations and two correlations, so the variance covariance matrix would be $3\times 3$. 
+\item Question: if we have eight correlated random variables, what are the dimensions of the variance-covariance (vcov) matrix?  And how many correlation parameters will we have in this vcov matrix?
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+How to generate simulated bivariate correlated data:
+
+<<>>=
+library(MASS)
+Sigma<-matrix(c(1,.6,.6,1),byrow=FALSE,ncol=2)
+u<-mvrnorm(100,mu=c(0,0),Sigma=Sigma)
+head(u)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate distributions} 
+
+Visualizing bivariate correlated data:
+
+<<fig.height=4,echo=FALSE>>=
+plot(u[,1],u[,2])
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+
+The correlations (0.58 and 1.00) you see in the model output below are the correlations between the varying intercepts and slopes for subjects and for items.
+\small
 \begin{verbatim}
 Random effects:
  Groups   Name        Variance Std.Dev. Corr
@@ -991,7 +1124,8 @@ Goals:
 \framesubtitle{Example: Chinese relative clause data} 
 
 <<>>=
-dat<-read.table("data/gibsonwu2012datarepeat.txt",header=TRUE)
+dat<-read.table("data/gibsonwu2012datarepeat.txt",
+                header=TRUE)
 head(dat)
 dat$cond<-ifelse(dat$condition=="subj-ext",-1,1)
 @
@@ -1004,6 +1138,14 @@ dat$cond<-ifelse(dat$condition=="subj-ext",-1,1)
 <<>>=
 library(lme4)
 m0<-lmer(rt~cond + (1|subj),dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model assumptions, model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+\tiny
+<<>>=
 summary(m0)
 @
 
@@ -1014,6 +1156,14 @@ summary(m0)
 
 <<>>=
 m1<-lmer(rt~cond + (1+cond||subj),dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model assumptions, model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+\tiny
+<<>>=
 summary(m1)
 @
 
@@ -1024,6 +1174,14 @@ summary(m1)
 
 <<>>=
 m2<-lmer(rt~cond + (1+cond|subj),dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model assumptions, model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+\tiny
+<<>>=
 summary(m2)
 @
 
@@ -1034,7 +1192,7 @@ summary(m2)
 
 Model assumption: residuals are normal
 
-<<>>=
+<<echo=FALSE,fig.height=3>>=
 hist(residuals(m0))
 @
 
@@ -1049,7 +1207,14 @@ This assumption is clearly violated. A log-transform on the reading times will r
 m0log<-lmer(log(rt)~cond + (1|subj),dat)
 m1log<-lmer(log(rt)~cond + (1+cond||subj),dat)
 m2log<-lmer(log(rt)~cond + (1+cond|subj),dat)
+@
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model assumptions, model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+
+<<echo=FALSE,fig.height=3>>=
 hist(residuals(m0log))
 @
 
@@ -1128,7 +1293,7 @@ So the relevant Chi-sq distribution is chisq(df=1).
 
 Let's visualize this and draw the critical chi-sq value (just like the critical t-value in the t-distribution):
 
-<<>>=
+<<echo=FALSE,fig.height=3>>=
 x<-seq(1,20,by=0.001)
 plot(x,dchisq(x,df=1),type="l")
 crit_chisq<-qchisq(0.95,df=1)
@@ -1153,14 +1318,22 @@ See Bates, Kliegl, Vasishth, Baayen, Parsimonious Mixed Models: https://arxiv.or
 
 
 In practice, we can use the anova function (this is literally the likelihood ratio test I showed above) for model comparison:
-
+\small
 <<>>=
 anova(m0,m1)
-anova(m1,m2)
-anova(m0,m2)
 @
 
-Here, m2 is the best model under the likelihood ratio test.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+
+\small
+<<>>=
+anova(m1,m2)
+@
+
 
 \end{frame}
 
@@ -1168,14 +1341,45 @@ Here, m2 is the best model under the likelihood ratio test.
 \framesubtitle{Example: Chinese relative clause data} 
 
 
-On the log scale, the conclusion is very different!
-
+\small
 <<>>=
-anova(m0log,m1log)
-anova(m1log,m2log)
-anova(m0log,m2log)
+anova(m0,m2)
 @
 
+Here, m2 is the best model under the likelihood ratio test.
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]\frametitle{Model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+
+
+On the log scale, the conclusion is very different!
+\small
+<<>>=
+anova(m0log,m1log)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+
+\small
+<<>>=
+anova(m1log,m2log)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+\small
+<<>>=
+anova(m0log,m2log)
+@
 m0 is good enough. Since the model assumptions are severely violated in the raw reading time analyses, I would only trust the log rt analyses (well, we didn't learn much from the expt.\ since we failed to reject the null).
 
 \end{frame}
@@ -1194,12 +1398,20 @@ you can now do a significance test to test whether a predictor is statistical si
 \framesubtitle{Example: Chinese relative clause data} 
 
 Suppose we decide on the m0log model. Then, we can check if relative clauses have an effect as follows. The null hypothesis is that $\beta_1 = 0$.
-
+\small
 <<>>=
 ## Null model:
 m0logNULL<-lmer(log(rt)~ 1 + (1|subj),dat)
 ## Alternative model:
 m0log<-lmer(log(rt)~1 + cond + (1|subj),dat)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+
+<<>>=
 anova(m0logNULL,m0log)
 @
 
@@ -1210,11 +1422,18 @@ anova(m0logNULL,m0log)
 
 
 If you had gone the Barr et al route, then you would do:
-
+\small
 
 <<>>>=
 m2logNULL<-lmer(log(rt)~1 + (1+cond|subj),dat)
 m2log<-lmer(log(rt)~1+cond + (1+cond|subj),dat)
+@
+
+\end{frame}
+\begin{frame}[fragile]\frametitle{Model selection}
+\framesubtitle{Example: Chinese relative clause data} 
+
+<<>>=
 anova(m2logNULL,m2log)
 @
 
