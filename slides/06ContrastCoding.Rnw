@@ -111,8 +111,6 @@ Goals of this  lecture:
 
 \begin{itemize}
 \item
-Beginners tend to go wild with factorial designs, and sometimes want hundreds of conditions. 
-\item
 We will not go beyond  $2\times 2$.
 \item 
 My  advice for your own work is to keep it simple: four conditions maximum.
@@ -124,9 +122,9 @@ My  advice for your own work is to keep it simple: four conditions maximum.
 \begin{frame}\frametitle{Typical experiment designs}
 
 \begin{itemize}
-\item A classic beginner mistake is to design an experiment without any clear hypotheses in mind.
-\item After the data come in, we start doing different pairwise comparisons.
-\item A better way: develop an analysis plan in advance using simulated data. 
+\item A classic beginner mistake (I have done this) is to design an experiment without any clear hypotheses in mind.
+\item After the data come in, we start speculating and trying out different pairwise comparisons.
+\item A better way: develop an analysis plan in advance using simulated data. This requires some mental discipline.
 \item Define \textit{a priori} comparisons.
 \item Pre-registration is a useful tool (to be discussed later).
 \end{itemize}
@@ -134,6 +132,8 @@ My  advice for your own work is to keep it simple: four conditions maximum.
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Generating simulated data}
+
+We can generate between-subjects data using a function called mixedDesign.
 
 <<>>=
 library(dplyr)
@@ -146,16 +146,35 @@ set.seed(1)
 
 \end{frame}
 
+
 \begin{frame}[fragile]\frametitle{Generating simulated data}
 
+\small
+Generate between-subjects data:
 <<>>=
 simdat <- mixedDesign(B=2, W=NULL, n=5, 
                       M=M,  SD=.20, long = TRUE) 
+t(xtabs(~id+B_A,simdat))
 @
 
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Generating simulated data}
+
+We can generate within-subjects data as well, but some changes to the function are needed:
+
+\small
+<<>>=
+simdat_w <- mixedDesign(W=2, B=NULL, n=5, 
+                      M=t(M),  SD=.20, long = TRUE)
+t(xtabs(~id+W_a,simdat_w))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+Using between-subjects simulated data here,  rename the columns:
 
 <<>>=
 names(simdat)[1] <- "F"  # Rename B_A to F(actor)
@@ -177,8 +196,10 @@ str(simdat)
 \begin{frame}[fragile]\frametitle{Generating simulated data}
 
 <<>>=
-table1 <- simdat %>% group_by(F) %>% # Table for main effect F
-   summarize(N=n(), M=mean(DV), SD=sd(DV), SE=SD/sqrt(N) )
+table1 <- simdat %>% group_by(F) %>% 
+  # Table for main effect F
+   summarize(N=n(), M=mean(DV), 
+             SD=sd(DV), SE=SD/sqrt(N) )
 table1
 @
 
@@ -274,20 +295,28 @@ contrasts(simdat$Fb)
 
 \begin{frame}[fragile]\frametitle{Sum contrasts}
 
+\small
 <<>>=
 (contrasts(simdat$F) <- c(-0.5,+0.5))
 m1_mr <- lm(DV ~ F, simdat)
-summary(m1_mr)
 @
 
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Sum contrasts}
 
+
+<<>>=
+summary(m1_mr)
+@
+
+\end{frame}
+\begin{frame}[fragile]\frametitle{Sum contrasts}
+
 \begin{equation}
 \begin{array}{lcl}
 \text{Intercept} = & (\hat{\mu}_1 + \hat{\mu}_2)/2 & = \text{estimated mean of \texttt{F1} and \texttt{F2}} \\
-\text{Slope (\texttt{F1})} = & \hat{\mu}_2 - \hat{\mu}_1 & = \text{estim. mean for \texttt{F2}} - \text{estim. mean for \texttt{F1}} 
+\text{Slope (\texttt{F1})} = & \hat{\mu}_2 - \hat{\mu}_1 & = \text{est. mean for \texttt{F2}} - \text{estim. mean for \texttt{F1}} 
 \end{array}
 \label{def:beta2}
 \end{equation}
@@ -369,6 +398,18 @@ table.word1
 
 \end{frame}
 
+\begin{frame}[fragile]\frametitle{Generating simulated data}
+
+<<echo=FALSE,fig.height=4>>=
+(plot1 <- qplot(x=F, y=M, group=1, data=table.word, geom=c("point", "line")) + 
+	 geom_errorbar(aes(max=M+SE, min=M-SE), width=0) + 
+   #scale_y_continuous(breaks=c(250,275,300)) + 
+   #scale_y_continuous(breaks=seq(0,1,.2)) + #coord_cartesian(ylim=c(0,1)) + 
+   labs(y="Mean Response Time [sec]", x="Factor F") +
+   theme_apa())
+@
+\end{frame}
+
 \begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
 
 The estimated means reflect our assumptions about the true means in the data simulation: Response times decrease with increasing word frequency. 
@@ -378,6 +419,18 @@ aovF <- aov(DV ~ F + Error(id), data=simdat2)
 summary(aovF)
 @
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+
+\begin{itemize}
+\item
+Notice that the ANOVA only tells that there is some difference, not which conditions are different from which.
+\item
+People often do an ANOVA and only if they find some difference do they do pairwise comparisons.
+\item
+But this two-step procedure is unnecessary; you can simply specify your hypotheses directly through contrast coding.
+\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
@@ -449,7 +502,7 @@ Here, the weights are $-1/3, 2/3, -1/3$, and they again indicate how to combine 
 
 \begin{frame}[fragile]\frametitle{The hypothesis matrix}
 
-We can write the hypotheses in two columns  of a matrix:
+We can write the weights for the hypotheses in two columns  of a matrix:
 
 <<>>=
 HcSum <- rbind(cH00=c(low= 1/3, med= 1/3, hi= 1/3), 
@@ -463,11 +516,13 @@ fractions(t(HcSum))
 
 \begin{frame}[fragile]\frametitle{The hypothesis matrix}
 
-The generalized inverse:
+The generalized inverse (details require matrix algebra, which we will just turn to):
 
 <<>>=
-ginv2 <- function(x) # define a function to make the output nicer
-  fractions(provideDimnames(ginv(x),base=dimnames(x)[2:1]))
+ginv2 <- function(x) 
+  # define a function to make the output nicer
+  fractions(provideDimnames(ginv(x),
+                            base=dimnames(x)[2:1]))
 @
 
 \end{frame}
@@ -501,6 +556,22 @@ m1_mr <- lm(DV ~ F, data=simdat2)
 
 \begin{frame}[fragile]\frametitle{The hypothesis matrix}
 
+Recall that in matrix form, the linear model is:
+
+$DV = X\beta +\varepsilon$, where X is:
+
+\tiny
+<<>>=
+head(round(model.matrix(m1_mr)))
+@
+
+You can see that the model or design matrix X is based on the generalized inverse of the hypothesis matrix.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The hypothesis matrix}
+
+\tiny
 <<>>=
 summary(m1_mr)
 @
@@ -527,6 +598,11 @@ From the hypothesis matrix to the contrast matrix:
 <<>>=
 fractions(contr.sdif(3))
 @
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Repeated difference contrasts}
 
 Compares med to low, and high to low frequency.
 
@@ -574,13 +650,14 @@ GM <-  mean(table4$M) # Grand Mean
 
 table4a <- table4
 names(table4a) <- c("Factor A","Factor B",
-                    "N data","Means","Std. dev.","Std. errors")
+                    "N data","Means",
+                    "Std. dev.","Std. errors")
 @
 
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
-\small
+\tiny
 <<>>=
 table4a
 @
@@ -605,7 +682,13 @@ table4a
 # ANOVA: B_A(2) times B_B(2)
 m2_aov <- aov(DV ~ A*B + Error(id), data=simdat4)
 summary(m2_aov)
+@
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
+\small
+<<>>=
 # MR: B_A(2) times B_B(2)
 m2_mr <- lm(DV ~ A*B, data=simdat4)
 summary(m2_mr)$coefficients
@@ -650,6 +733,8 @@ vignette("hypr-intro", package = "hypr")
 vignette("hypr-regression", package = "hypr")
 @
 
+This package allows you to easy go from the hypothesis to contrast matrix and back.
+
 \end{frame}
 
 \section{How I use contrast coding}
@@ -657,9 +742,14 @@ vignette("hypr-regression", package = "hypr")
 \begin{frame}[fragile]\frametitle{How I use contrast coding}
 
 \begin{itemize}
-\item I strongly believe that experiment designs should be kept simple. $2\times 2\times 2$ is too complex for my taste.
+\item In my own work, I like experiment designs to be kept simple. $2\times 2\times 2$ is too complex for my taste.
 \item However, sometimes complex designs are unavoidable. In that case, I generally set up sum contrasts for ANOVA-style analyses, or nested contrasts (or both).
-\item For examples, see any of my papers from 2013 onwards.
+\item Example of $2\times 2\times 2$ design: 
+
+Lena A. Jäger, Daniela Mertzen, Julie A. Van Dyke, and Shravan Vasishth. Interference patterns in subject-verb agreement and reflexives revisited: A large-sample study. Journal of Memory and Language, 111, 2020.
+
+https://osf.io/reavs/
+
 \end{itemize}
 
 \end{frame}
@@ -672,6 +762,8 @@ I never use the contr.sum() etc. functions. I define my own contrast coding colu
 \item
 This becomes relevant in linear mixed models.
 \end{itemize}
+
+For example:
 
 \end{frame}
 
@@ -693,9 +785,11 @@ xtabs(~pred+predability,persian)
 <<>>=
 contrasts(persian$distance)<-contr.sum(2)
 contrasts(persian$predability)<-contr.sum(2)
-m<-lmer(rt~distance*predability+(1+distance*predability||subj)+(1+distance*predability||item),persian)
+m<-lmer(rt~distance*predability+(1+distance*predability||subj)+
+          (1+distance*predability||item),persian)
 @
 
+[Ignore the singularity warning for now]
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{How I use contrast coding}
@@ -714,7 +808,9 @@ summary(m)
 Using my own contrast coding vectors:
 
 <<>>=
-m2<-lmer(rt~dist*pred+(1+dist*pred||subj)+(1+dist*pred||item),persian)
+head(persian)
+m2<-lmer(rt~dist*pred+(1+dist*pred||subj)+
+           (1+dist*pred||item),persian)
 @
 
 \end{frame}
@@ -737,15 +833,23 @@ summary(m2)
 
 
 \end{frame}
+
+
+
 \section{Further details}
 
 \begin{frame}\frametitle{To learn more}
 
 Work through:
 
-Daniel J. Schad, Sven Hohenstein, Shravan Vasishth, and Reinhold Kliegl. How to capitalize on a priori contrasts in linear (mixed) models: A tutorial. Journal of Memory and Language, 110, 2020.
+Daniel J. Schad, Shravan Vasishth, Sven Hohenstein, and Reinhold Kliegl. How to capitalize on a priori contrasts in linear (mixed) models: A tutorial. Journal of Memory and Language, 110, 2020.
 
-
+\begin{itemize}
+\item
+This is a long and detailed paper, and should be read patiently, working through the examples. 
+\item
+To fully understand contrasts, you need to become familiar with the matrix formulation of the linear model (some passive matrix algebra knowledge is needed).
+\end{itemize}
 \end{frame}
 
 \end{document}
