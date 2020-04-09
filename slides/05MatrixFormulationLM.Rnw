@@ -1,0 +1,999 @@
+\documentclass[slidestop,compress,mathserif,red]{beamer}
+%\documentclass[handout]{beamer}
+
+%\usepackage{beamerthemesplit}
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{gb4e}
+\usepackage{qtree}
+\usepackage{hyperref}
+\usepackage{ulem}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+\setbeamerfont{page number in head/foot}{size=\large}
+\setbeamertemplate{footline}[frame number]
+
+%\setbeamertemplate{footline}%
+%{%
+%\hfill\insertpagenumber\ of \ref{TotPages}\hspace{.5cm}\vspace{.5cm}
+%\hfill\insertpagenumber\ of 28\hspace{.5cm}\vspace{.5cm}
+%}%
+
+
+
+\mode<presentation>
+{
+%\usetheme{Singapore}
+%\usetheme{Berlin}
+
+%\setbeamercovered{transparent}
+
+}
+
+
+%\mode<handout>
+%{
+%\usepackage{pgfpages}
+%\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=5mm]
+%}
+
+
+\usetheme{Montpellier}
+%\usecolortheme{beetle}
+%\usecolortheme{seagull}
+\usecolortheme{lily}
+
+\title[Lecture 5]{Introduction to statistics: Matrix formulatuon of the linear model}
+
+\author{Shravan Vasishth}
+
+\institute{Universit\"at Potsdam\\
+vasishth@uni-potsdam.de\\
+http://www.ling.uni-potsdam.de/$\sim$vasishth
+}
+
+\date{\today}
+
+\addtobeamertemplate{navigation symbols}{}{ \hspace{1em}    \usebeamerfont{footline}%
+    \insertframenumber / \inserttotalframenumber }
+
+\begin{document}
+\maketitle
+
+
+
+<<setup,include=FALSE,cache=FALSE>>=
+library(knitr)
+library(coda)
+
+# set global chunk options, put figures into folder
+options(replace.assign=TRUE,show.signif.stars=FALSE)
+opts_chunk$set(fig.path='figures/figure-', fig.align='center', fig.show='hold')
+options(replace.assign=TRUE,width=75)
+opts_chunk$set(dev='postscript')
+#library(rstan)
+#set.seed(9991)
+# save workspace image, if you want
+#the.date <- format(Sys.time(), "%b%d%Y")
+#save.image(file=paste0("homework01-",the.date,".RData")
+@
+
+\section{Introduction}
+
+ \begin{frame}[fragile]\frametitle{Matrix form of the linear model}
+
+\begin{itemize}
+\item
+This lecture is not crucial for following this course.
+\item 
+It is however useful to have seen the matrix form of the linear model once.
+\item
+Having see this formulation once will help in understanding contrast coding.
+\end{itemize}
+
+\end{frame}
+
+\section{Linear modeling theory: Matrix formulation}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+Consider a deterministic function $\phi(\mathbf{x},\beta)$ which takes as input some variable values $x$ and some fixed values $\beta$.  A simple (if abstract) example would be
+
+\begin{equation}
+y = \beta x
+\end{equation}
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+Another example with two fixed values $\beta_0$ and $\beta_1$ is:
+
+\begin{equation}
+y = \beta_0 + \beta_1 x
+\end{equation}
+
+We can rewrite the above equation as follows.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+
+\begin{equation}
+\begin{split}
+y=& \beta_0 + \beta_1 x\\
+=& \beta_0\times 1 + \beta_1 x\\
+=& \begin{pmatrix}
+1 & x\\
+\end{pmatrix}
+\begin{pmatrix}
+\beta_0 \\
+\beta_1 \\
+\end{pmatrix}\\
+y =& \phi(x, \beta)\\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+
+In a statistical model, we don't expect an equation like $y=\phi(x,\beta)$ to fit all the points exactly. 
+
+For example, we could come up with an 
+equation that, given a person's weight, gives a prediction of their height:
+
+\begin{equation}
+\hbox{predicted height} = \beta_0 + \beta_1 \hbox{weight}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+Given any single value of the weight of a person, we will probably not get a perfectly correct prediction of the height of that person.
+
+This leads us to a non-deterministic version of the above function:
+
+\begin{equation}
+y=\phi(x,\beta,\varepsilon)=\beta_0+\beta_1x+\varepsilon
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+Here, $\varepsilon$ is an error random variable which is assumed to have some PDF (the normal distribution) associated with it. 
+It is assumed to have expectation (mean) 0, and some standard deviation (to be estimated from the data) $\sigma$.
+
+We can write this statement in compact form as $\varepsilon \sim N(0,\sigma)$.
+
+The \textbf{general linear model} is a non-deterministic function like the one above:
+
+\begin{equation}
+Y=f(x)^T\beta +\varepsilon 
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+
+The matrix formulation will be written as below. $n$ refers to the number of data points (that is, $Y_1,\dots,Y_n$), and the index $j$ ranges from $1$ to $n$.
+
+\begin{equation}
+Y = X\beta + \varepsilon \Leftrightarrow y_j = f(x_j)^T \beta + \varepsilon_j, j=1,\dots,n
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+To make this concrete, suppose we have three data points, i.e., n=3. Then, the matrix formulation is
+
+\begin{equation}
+\begin{split}
+\begin{pmatrix}
+y_1 \\
+y_2\\
+y_3 \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+1 & x_1 \\
+1 & x_2 \\
+1 & x_3 \\
+\end{pmatrix}
+\begin{pmatrix}
+\beta_0 \\
+\beta_1 \\
+\end{pmatrix}+ \varepsilon\\
+\end{split}
+\end{equation}
+
+\begin{equation}
+Y = X \beta + \varepsilon 
+\end{equation}
+
+Here, $f(x_1)^T = (1~x_1)$, and is the first row of the matrix $X$, 
+$f(x_2)^T = (1~x_2)$ is the second row, and 
+$f(x_3)^T = (1~x_3)$ is the third row.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The linear model}
+
+
+Note that $E[Y]=X\beta$.  $\beta$ is a $p\times 1$ matrix, and X, the \textbf{design matrix}, is $n\times p$.
+
+\end{frame}
+
+
+\subsection{Least squares estimation: Geometric argument}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+\begin{itemize}
+\item
+When we have a deterministic model  $y=\phi(f(x)^T,\beta)=\beta_0+\beta_1x$, this implies a perfect fit to all data points. 
+\item
+This is like solving the equation $Ax=b$ in linear algebra: we solve for $\beta$ in $X\beta=y$ using, e.g., Gaussian elimination.
+\item
+When we have a non-deterministic model 
+$y=\phi(f(x)^T,\beta,\varepsilon)$, there is no solution. Now, the best we can do is to get $Ax$ to be as close an approximation as possible to b in $Ax=b$. 
+\item
+In other words, we try to minimize $\mid b-Ax\mid$. 
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+\begin{itemize}
+\item
+The goal is to estimate $\beta$; we want to find a value of $\beta$ such that the observed Y is as close to its expected value $X\beta$. 
+\item
+In order to be able to identify $\beta$ from $X\beta$, the linear transformation $\beta \rightarrow X\beta$ should be one-to-one, so that every possible value of $\beta$ gives a different $X\beta$. 
+\end{itemize}
+
+This in turn requires that X be of full rank $p$.
+
+So, if X is an $n\times p$ matrix, then it is necessary that $n\geq p$. There must be at least as many observations as parameters. If this is not true, then the model is said to be \textbf{over-parameterized}.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+\begin{itemize}
+\item
+Assuming that X is of full rank, and that $n>p$, 
+Y can be considered a point in n-dimensional space and the set of candidate $X\beta$ is a $p$-dimensional subspace of this space; see the figure on the  next slide. 
+\item
+There will be one point in this subspace which is closest to Y in terms of Euclidean distance. The unique $\beta$ that corresponds to this point is the \textbf{least squares estimator} of $\beta$; we will call this estimator $\hat \beta$.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+\begin{center}
+\includegraphics[width=6cm,angle=0]{figures/leastsq.pdf}
+\end{center}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+Notice that $\varepsilon=(Y - X\hat\beta)$ and $X\beta$ are perpendicular to each other. Because the dot product of two perpendicular (orthogonal) vectors is 0, we get the result:
+
+\begin{equation}
+(Y- X\hat\beta)^T X \beta = 0 \Leftrightarrow (Y- X\hat\beta)^T X = 0 
+\end{equation}
+
+Example: 
+<<>>=
+x1<-c(1,0)
+x2<-c(0,1)
+sum(x1*x2)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+Multiplying out the terms, we proceed as follows. One result that we use here is that $(AB)^T = B^T A^T$.
+
+\begin{equation}
+\begin{split}
+~& (Y- X\hat\beta)^T X = 0  \\
+~& (Y^T- \hat\beta^T X^T)X = 0\\
+\Leftrightarrow& Y^T X - \hat\beta^TX^T X = 0 \quad  \\
+\Leftrightarrow& Y^T X = \hat\beta^TX^T X \\
+\Leftrightarrow& (Y^T X)^T = (\hat\beta^TX^T X)^T \\
+\Leftrightarrow& X^T Y = X^TX\hat\beta\\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+\textbf{This gives us the important result}: 
+\begin{equation}
+\hat\beta = (X^TX)^{-1}X^T Y
+\end{equation}
+X is of full rank, therefore $X^TX$ is invertible.
+
+\begin{itemize}
+\item
+$X^{+}=(X^TX)^{-1}X^T$ is the \textbf{generalized matrix inverse} of the design matrix X, and will become very important for us in the \textbf{contrast coding} lecture.
+\item 
+We will see in the contrast coding lecture how $X^{+}$ defines hypothesis tests in the linear (mixed) model.
+\end{itemize}
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+
+\textbf{Example}:
+
+<<>>=
+(X<-matrix(c(rep(1,8),rep(c(-1,1),each=4),
+            rep(c(-1,1),each=2,2)),ncol=3))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Geometric argument}
+<<>>=
+library(Matrix)
+## full rank:
+rankMatrix(X)
+@
+
+\end{frame}
+
+\subsection{The expectation and variance of the parameters beta}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+
+Our model is:
+
+\begin{equation}
+Y = X\beta + \varepsilon
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+Let  $\varepsilon\sim N(0,\sigma^2)$. 
+
+In other words, we are assuming that each value generated by the random variable $\varepsilon$ is independent and it has the same distribution, i.e., it is identically distributed. This is sometimes shortened to the iid assumption. 
+
+So we should technically be writing:
+
+\begin{equation}
+Y = X\beta + \varepsilon \quad  \varepsilon\sim N(0,\sigma)
+\end{equation}
+
+and add that $Y$ are independent and identically distributed. 
+
+We could also have written:
+
+\begin{equation}
+Y \sim Normal(X\beta,\sigma)
+\end{equation}
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+Some consequences of the above statements:
+
+\begin{enumerate}
+\item $E(\varepsilon)=0$
+\item $Var(\varepsilon)=\sigma^2 I_n$
+\item $E[Y]=X\beta=\mu$
+\item $Var(Y)=\sigma^2 I_n$
+\end{enumerate}
+
+$I_n$ here is the identity  matrix, e.g.:
+
+<<>>=
+I<-matrix(c(1,0,0,1),ncol = 2)
+sigma<-10
+sigma*I
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+We can now derive the expectation and variance of the estimators $\hat\beta$. 
+
+We need a fact about variances: 
+$Var(aB)$, where a is a constant, is $a^2 Var(B)$. In the matrix setting, Var(AB), where A is a constant, is $A Var(B)A^T$.
+
+\begin{equation}
+E[\hat\beta] = E[(X^TX)^{-1}X^T Y] = (X^TX)^{-1}X^T X\beta = \beta
+\end{equation}
+
+\noindent
+Notice that the above shows that $\hat\beta$ is an unbiased estimator of $\beta$.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+
+Next, we compute the variance:
+
+\begin{equation}
+Var(\hat\beta) = Var([(X^TX)^{-1}X^T] Y)
+\end{equation}
+
+Expanding the right hand side out:
+
+\begin{equation}
+Var([(X^TX)^{-1}X^T] Y) = [(X^TX)^{-1}X^T] Var(Y)  [(X^TX)^{-1}X^T]^{T}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+
+Replacing Var(Y) with its variance $\sigma^2 I$, and unpacking the transpose on the right-most expression $[(X^TX)^{-1}X^T]^{T}$:
+
+\begin{equation}
+Var(\hat\beta)= [(X^TX)^{-1}X^T] \sigma^2 I  X[(X^TX)^{-1}]^{T} 
+\end{equation}
+
+Since  $\sigma^2$ is a scalar we can move it to the left, and any matrix multiplied by I is the matrix itself, so we ignore I, getting:
+
+\begin{equation}
+Var(\hat\beta)= \sigma^2 [(X^TX)^{-1}X^T X[(X^TX)^{-1}]^{T} 
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+Since $(X^TX)^{-1}X^T X = I$, we can simplify to
+
+\begin{equation}
+Var(\hat\beta)= \sigma^2 [(X^TX)^{-1}]^{T} 
+\end{equation}
+
+Now, $(X^TX)^{-1}$ is symmetric, so 
+$[(X^TX)^{-1}]^T=(X^TX)^{-1}$. This gives us:
+
+\begin{equation}
+Var(\hat\beta)= \sigma^2 (X^TX)^{-1} 
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+An example:
+
+<<>>=
+hindi<-read.table("data/hindiJEMR.txt",header=TRUE)
+y<-as.matrix(hindi$TFT)
+x<-log(hindi$word_len)
+m0<-lm(y~x)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+<<>>=
+## design matrix:
+X<-model.matrix(m0)
+head(X,n=4)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+<<>>=
+## (X^TX)^{-1}
+invXTX<-solve(t(X)%*%X)
+## estimate of beta:
+(beta<-invXTX%*%t(X)%*%y)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+
+<<>>=
+## estimated SD (se) of the estimate of beta:
+(hat_sigma<-summary(m0)$sigma)
+(hat_var<-hat_sigma^2*invXTX)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+What we have here is a bivariate normal distribution as an estimate of the $\beta$ parameters:
+
+\begin{equation}
+\begin{pmatrix}
+\hat\beta_0\\
+\hat\beta_1\\
+\end{pmatrix}
+\sim 
+N(\begin{pmatrix}
+210.7777\\
+129.4064\\
+\end{pmatrix},
+\begin{pmatrix}
+31.35647 & -21.61119\\
+-21.61119 & 16.88379\\
+\end{pmatrix})
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+
+The variance of a bivariate distribution has the variances along the diagonal, and the covariance between $\beta_0$ and 
+$\beta_1$ on the off-diagonals. Covariance is defined as:
+
+\begin{equation}
+Cov(\hat\beta_0,\hat\beta_1)=\rho \sigma_{\hat\beta_0}\sigma_{\hat\beta_1}
+\end{equation}
+
+where $\rho$ is the correlation between $\beta_0$ and $\beta_1$.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+
+
+So $\hat\beta_0 \sim N(210.78,31.36)$ and $\hat\beta_1 \sim N(129.41,16.88)$, and $Cov(\beta_0,\beta_1)=-21.61$. So the correlation between the $\hat\beta$ is 
+
+<<>>=
+## hat rho:
+-21.61/(sqrt(31.36)*sqrt(16.88))
+@
+
+\end{frame}
+
+\section{Hypothesis testing using the likelihood ratio}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+Define the likelihood ratio statistic as:
+
+\begin{equation}
+\Lambda = \frac{max_{\theta\in \omega_0}(lik(\theta))}{max_{\theta\in \omega_1)}(lik(\theta))}
+\end{equation}
+
+\noindent
+where, $\omega_0=\{\mu_0\}$ and $\omega_1=\{\forall \mu \mid \mu\neq \mu_0\}$.
+
+Suppose that $X_1,\dots, X_n$ are iid and normally distributed with mean $\mu$ and standard deviation $\sigma$ (assume for simplicity that $\sigma$ is known). 
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+
+Let the null hypothesis be $H_0: \mu=\mu_0$ and the alternative be $H_1: \mu\neq \mu_0$. Here, $\mu_0$ is a number, such as $0$.
+Now, the numerator of the likelihood ratio statistic is:
+
+\begin{equation}
+\frac{1}{(\sigma\sqrt{2\pi})^n} 
+           exp\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \mu_0)^2  \right)
+\end{equation}
+
+For the denominator, the maximum likelihood can be achieved by specifying the MLE $\bar{X}$ as $\mu$:
+
+\begin{equation}
+\frac{1}{(\sigma\sqrt{2\pi})^n} exp \left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \bar{X})^2 \right)
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+
+The likelihood ratio statistic is then:
+
+\begin{equation}
+\Lambda = 
+\frac{\frac{1}{(\sigma\sqrt{2\pi})^n} 
+           exp\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \mu_0)^2  \right)}{\frac{1}{(\sigma\sqrt{2\pi})^n} 
+           exp\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \bar{X})^2  \right)}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+Canceling out common terms:
+
+\begin{equation}
+\Lambda = 
+\frac{exp\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \mu_0)^2  \right)}{
+        exp\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \bar{X})^2  \right)}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+Taking logs:
+
+\begin{equation}
+\begin{split}
+\log \Lambda =& 
+\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \mu_0)^2  \right)-\left( -\frac{1}{2\sigma^2} \sum_{i=1}^n (X_i - \bar{X})^2  \right)\\
+=& -\frac{1}{2\sigma^2} \left( \sum_{i=1}^n (X_i - \mu_0)^2  -  \sum_{i=1}^n (X_i - \bar{X})^2 \right)\\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+Now, note that 
+
+\begin{equation}
+\sum_{i=1}^n (X_i -\mu_0)^2 = \sum_{i=1}^n (X_i - \bar{X})^2 + n(\bar{X} - \mu_0)^2 
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+This means that 
+
+\begin{equation}
+\sum_{i=1}^n (X_i -\mu_0)^2 - \sum_{i=1}^n (X_i - \bar{X})^2 = n(\bar{X} - \mu_0)^2 
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+
+So, we can write $\Lambda$ as:
+
+\begin{equation}
+\Lambda = -\frac{1}{2\sigma^2}   n(\bar{X} - \mu_0)^2 
+\end{equation}
+
+Rearranging terms:
+
+\begin{equation}
+-2 \Lambda =    \frac{n(\bar{X} - \mu_0)^2 }{\sigma^2}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+
+Or maybe even more transparently:
+
+\begin{equation}
+-2 \Lambda =    \frac{(\bar{X} - \mu_0)^2 }{\frac{\sigma^2}{n}}
+\end{equation}
+
+This should remind you of the Wald statistic we saw earlier--the t-test! Basically, all this
+is saying is that we reject the null when $\mid \bar{X} - \mu_0\mid$ is
+large.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+More generally, we will define the \textbf{likelihood ratio test statistic} as follows. Here, $L(\theta)$ refers to the likelihood given some value of $\theta$, and 
+$\ell(\theta)$ refers to the log likelihood.
+
+\begin{equation}
+\begin{split}
+L =& -2\times \log (L(\theta_0)/L(\theta_1)) \\
+\log L=& -2\times \{\ell (\theta_0)-\ell(\theta_1)\}\\
+\log L =& -2 \times \{\ell(\theta_0) - \ell(\theta_1)\}
+\end{split}
+\end{equation}
+
+where $\theta_1$ and $\theta_0$ are the estimates of $\theta$ under the alternative and null hypotheses, respectively. The likelihood ratio test rejects $H_0$ if $\log L$ is sufficiently large. As the sample size approaches infinity:
+
+\begin{equation}
+\log L \rightarrow \chi_r^2  \hbox{ as }  n \rightarrow \infty
+\end{equation}
+
+where $r$ is called the degrees of freedom and is the difference in the number of parameters under $H_1$ and $H_0$. 
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+
+This is called Wilks' theorem. The proof of Wilks' theorem is fairly involved but you can find it on the internet if you are interested,
+or in Lehmann's \textit{Testing Statistical Hypotheses}.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+Note that sometimes you will see the form:
+
+\begin{equation}
+\log L = 2 \{\ell(\theta_1) - \ell(\theta_0)\}
+\end{equation}
+
+It should be clear that both statements are saying the same thing; in the second case, we are just subtracting the null hypothesis log likelihood from the alternative hypothesis log likelihood.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+A practical example will make the usage of this test clear.
+Let's just simulate a linear model:
+
+<<>>=
+x<-1:10
+y<- 10 + 2*x+rnorm(10,sd=10)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+<<simulatelm,fig.height=4>>=
+plot(x,y)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+<<>>=
+## null hypothesis model:
+m0<-lm(y~1)
+## alternative hypothesis model:
+m1<-lm(y~x)
+@
+
+<<>>=
+lambda<- -2*(logLik(m0)-logLik(m1))
+## observed value:
+lambda[1]
+## critical value:
+qchisq(0.95,df=1)
+# p-value:
+pchisq(lambda[1],df=1,lower.tail=FALSE)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+
+Here, we fit the null hypothesis model which only has an intercept term $\beta_0$, and the alternative model that has $\beta_1$ as well. 
+
+Finally, we compare the $\lambda$ with the critical chi-squared value for degrees of freedom 1.
+
+We also computed the probability of getting a $\lambda$ as extreme as we got assuming that the null is true:
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+Note that in the likelihood test above, we are comparing one nested model against another: the null hypothesis model is nested inside the alternative hypothesis model.  
+
+What this means is that the alternative hypothesis model contains all the parameters in the null hypothesis model plus some others.
+
+\end{frame}
+
+\section{Hypothesis testing using Analysis of variance (ANOVA)}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+We can compare two models, one nested inside another, as follows:
+
+<<>>=
+anova(m0,m1)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+The F-score you get here is actually the square of the t-value you get in the linear model summary:
+
+<<>>=
+sqrt(anova(m0,m1)$F[2])
+summary(m1)$coefficients[2,3]
+@
+
+This is because $t^2 = F$. The proof is discussed on page 9 of the Dobson and Barnett book.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+
+The ANOVA works as follows.  First define the residual as:\footnote{Note that I do not use $\varepsilon$ here, but e, to refer to the residual. This is because these are the estimates of $\varepsilon$ derived from the estimates $\hat\beta$.}
+
+\begin{equation}
+e = Y - X\hat\beta
+\end{equation}
+
+The square of this is: 
+
+
+\begin{equation}
+e^T e = (Y - X\hat \beta)^T (Y - X\hat \beta)
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+
+Define the \textbf{deviance} as: \label{deviance}
+
+\begin{equation}
+\begin{split} \label{eq:deviance}
+D =& \frac{1}{\sigma^2} (Y - X\hat \beta)^T (Y - X\hat \beta)\\
+=& \frac{1}{\sigma^2}  (Y^T - \hat \beta^TX^T)(Y - X\hat \beta)\\
+=& \frac{1}{\sigma^2} (Y^T Y - Y^TX\hat \beta - \hat\beta^TX^T Y + \hat\beta^TX^T  X\hat \beta)\\
+%=& \frac{1}{\sigma^2} (Y^T Y - \hat\beta^TX^T Y)\\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+Linear  modeling theory tells us $\hat \beta = (X^T X)^{-1} X^T Y$. Premultiplying both sides with $(X^T X)$, we get
+
+$$(X^T X)\hat \beta =  X^T Y$$
+
+It follows that we can rewrite the last line in equation~\ref{eq:deviance} as follows: We can replace $(X^T X)\hat \beta$ with 
+$X^T Y$.
+
+\begin{equation}
+\begin{split}
+D =& \frac{1}{\sigma^2} (Y^T Y - Y^TX\hat \beta - \hat\beta^TX^T Y + \hat\beta^T \underline{X^T  X\hat \beta})\\
+=& \frac{1}{\sigma^2} (Y^T Y - Y^TX\hat \beta - \hat\beta^TX^T Y + \hat\beta^T \underline{X^T Y})\\
+=& \frac{1}{\sigma^2} (Y^T Y - Y^TX\hat \beta) \\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+Notice that $Y^TX\hat \beta$ is a scalar ($1\times 1$) and is identical to  $\beta^TX^T Y$ (check this), so we could write:
+
+<<echo=FALSE>>=
+y<-rnorm(10)
+X<-matrix(c(rep(1,10),
+            rnorm(10)),ncol=2)
+b<-solve(t(X) %*% X)%*% t(X)%*% y
+#t(y)%*% X %*% b
+#t(b)%*%t(X)%*%y
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+$$D= \frac{1}{\sigma^2} (Y^T Y - \hat \beta^T X^T Y)$$
+
+Assume now that we have data of size n.
+
+Suppose we have a null hypothesis $H_0: \beta=\beta_0$ and an alternative hypothesis $H_1: \beta=\beta_{1}$. 
+
+Let the null hypothesis have q parameters, and the alternative p, where $q<p<n$.
+
+Let $X_0$ be the design matrix for $H_0$, and $X_1$ the design matrix for $H_1$.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+Compute the deviances $D_0$ and $D_1$ for each hypothesis, and compute $\Delta D$:
+
+\begin{equation}
+\begin{split}
+\Delta D =& D_0 - D_1 = \frac{1}{\sigma^2} [(Y^TY - \hat \beta_0 X_0^T Y) -  (Y^TY - \hat \beta_1 X_1^T Y)]\\
+=& \frac{1}{\sigma^2} [\hat \beta_1 X_1^T Y - \hat \beta_0 X_0^T Y]\\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+It turns out that the F-statistic has the following distribution if the null hypothesis is true:
+
+\begin{equation}
+F=\frac{\Delta D/(p-q)}{D_1/(n-p)} \sim F(p-q,n-p)
+\end{equation}
+
+So, an extreme value of F is inconsistent with the null and we reject it.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+
+The F-statistic is:
+
+\begin{equation}
+\begin{split}
+F=&\frac{\Delta D/(p-q)}{D_1/(n-p)} \\
+=& \frac{\hat \beta_1 X_1^T Y - \hat \beta_0^T X_0^T Y}{p-q} /
+\frac{Y^T Y - \hat \beta_1^T X_1^TY}{n-p}\\
+\end{split}
+\end{equation}
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+Traditionally, the way the F-test is summarized is:
+
+\begin{table}[!htbp]
+\caption{ANOVA table}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+Source of variance & df & Sum of squares & Mean square\\
+\hline
+Model with $\beta_0$ & q & $\beta_0^T X_0^T Y$ & \\
+Improvement due to & p-q & $\hat \beta_1 X_1^T Y - \hat \beta_0^T X_0^T Y$ & $\frac{\hat \beta_1 X_1^T Y - \hat \beta_0^T X_0^T Y}{p-q}$\\
+$\beta_1$ & & & \\
+Residual & n-p & $Y^T Y - \hat \beta_1^T X_1^TY$  & $\frac{Y^T Y - \hat \beta_1^T X_1^TY}{n-p}$\\
+\hline
+Total & n & $y^T y$ & \\
+\hline
+\end{tabular}
+\end{center}
+\label{default}
+\end{table}%
+
+There is much more to say here about ANOVA, but this is the basic idea.
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{ANOVA}
+
+Practically speaking, the usage is simple:
+
+<<>>=
+anova(m0,m1)
+@
+
+Here, the F-statistic tells us that the model m1 is ``better'' (there  is a significant effect of the predictor x).
+
+Whether that is a meaningful result depends on the power properties of the design (to be discussed later).
+
+\end{frame}
+
+
+\end{document}
