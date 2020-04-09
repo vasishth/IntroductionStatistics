@@ -88,7 +88,7 @@ We start with an example data-set that appears in the Dobson et al book: the Bee
 This data-set shows the number of beetles killed when they were exposed to different doses of some toxic chemical. 
 
 <<>>=
-(beetle<-read.table("datacode/beetle.txt",header=TRUE))
+(beetle<-read.table("data/beetle.txt",header=TRUE))
 @
 
 \end{frame}
@@ -107,7 +107,7 @@ The research question is: does dose affect probability of killing insects? The f
 
 It's also reasonable to just plot the relationship between dose and proportion of deaths.
 
-<<>>=
+<<echo=FALSE,fig.height=4>>=
 with(beetle,plot(dose,propn.dead))
 @
 
@@ -121,6 +121,14 @@ We could easily fit a linear model to this data-set. We may want to center the p
 
 <<>>=
 fm<-lm(propn.dead~scale(dose,scale=FALSE),beetle)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Logistic regression}
+
+<<>>=
 summary(fm)
 @
 
@@ -128,7 +136,7 @@ summary(fm)
 
 \begin{frame}[fragile]\frametitle{Logistic regression}
 
-<<>>=
+<<echo=FALSE,fig.height=4>>=
 with(beetle,plot(scale(dose,scale=FALSE),
                  propn.dead))
 abline(coef(fm))
@@ -179,7 +187,7 @@ Given a model like
 If we exponentiate each side, we get:
 
 \begin{equation}
-\exp \log \frac{p}{1-p} = \frac{p}{1-p} = \exp( \beta_0 + \beta_1 \hbox{dose})
+exp \log \frac{p}{1-p} = \frac{p}{1-p} = exp( \beta_0 + \beta_1 \hbox{dose})
 \end{equation}
 
 \end{frame}
@@ -189,7 +197,7 @@ If we exponentiate each side, we get:
 So now we just solve for p, and get (check this):
 
 \begin{equation} \label{problogisticregression}
-p = \frac{\exp( \beta_0 + \beta_1 \hbox{dose})}{1+\exp( \beta_0 + \beta_1 \hbox{dose})}
+p = \frac{exp( \beta_0 + \beta_1 \hbox{dose})}{1+exp( \beta_0 + \beta_1 \hbox{dose})}
 \end{equation}
 
 \end{frame}
@@ -204,6 +212,14 @@ fm1<-glm(propn.dead~dose,
          binomial(logit),
          weights=number,
          data=beetle)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Logistic regression}
+
+\small
+<<>>=
 summary(fm1)
 @
 
@@ -214,7 +230,7 @@ summary(fm1)
 
 We can also plot the observed proportions and the fitted values together; the fit looks pretty good.
 
-<<propndeadplot,fig.width=6>>=
+<<propndeadplot,echo=FALSE,fig.height=4>>=
 plot(propn.dead~dose,beetle)
 points(fm1$fitted~dose,beetle,pch=4)
 @
@@ -271,11 +287,14 @@ using equation~\ref{problogisticregression}.
 (upper_prob<-exp(upper)/(1+exp(upper)))
 @
 
-So for dose 1.7552, the probability of death is \Sexpr{round(mean_prob,2)},
-with 95\% confidence intervals \Sexpr{round(lower_prob,2)} and 
-\Sexpr{round(upper_prob,2)}.
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Logistic regression}
+
+So for dose 1.7552, the probability of death is \Sexpr{round(mean_prob,2)}, with 95\% confidence intervals \Sexpr{round(lower_prob,2)} and \Sexpr{round(upper_prob,2)}.
 
 \end{frame}
+
 
 \begin{frame}[fragile]\frametitle{Logistic regression}
 
@@ -304,6 +323,13 @@ We first have to create a vector that has value 1 if the word has 0~ms total rea
 hindi<-read.table("data/hindiJEMR.txt",header=TRUE)
 hindi$skip<-ifelse(hindi$TFT==0,1,0)
 fm_skip<-glm(skip ~ word_complex+SC,family=binomial(),hindi)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Multiple logistic regression}
+\small
+<<>>=
 summary(fm_skip)
 @
 
@@ -346,19 +372,19 @@ For different distributions in the exponential family, the canonical link functi
 \hline
 Distribution & $h(x_i^T \beta)=\mu_i$ & Canonical link: $g(\mu_i)=\theta_i$\\
 \hline
-Binomial & $\frac{\exp[\theta_i]}{1+\exp[\theta_i]}$ & $\log \frac{y}{1-y}$ \\
+Binomial & $\frac{exp[\theta_i]}{1+exp[\theta_i]}$ & $\log \frac{y}{1-y}$ \\
 logit link & & \\
 \hline
 Normal & $\theta$ & $g=h$ \\
 identity & & \\
 \hline
-Poisson & $\exp[\theta]$ & $\log[\mu]$ \\
+Poisson & $exp[\theta]$ & $\log[\mu]$ \\
 log & & \\
 \hline
 Gamma & $-\frac{1}{\theta}$ & $-\frac{1}{\mu_i}$\\
 inverse & & \\
 \hline
-Cloglog & $1-\exp[-\exp[\theta_i]]$ & $\log(-\log(1-\mu_i))$\\
+Cloglog & $1-exp[-exp[\theta_i]]$ & $\log(-\log(1-\mu_i))$\\
 cloglog & & \\
 \hline
 Probit & $\Phi(\theta)$ & 
@@ -432,7 +458,7 @@ glm1<-glm(propn.dead~dose,binomial(logit),
 \begin{frame}[fragile]\frametitle{Deviance for the binomial distribution}
 
 The summary output shows us the number of iterations that led to the parameter estimates:
-
+\tiny
 <<>>=
 summary(glm1)
 @
@@ -447,7 +473,13 @@ But we also see something called \textbf{Null deviance} and \textbf{Residual dev
 # beta.hat is (-60.71745 ,   34.27033)
 (eta.hat<-  -60.71745 +   34.27033*beetle$dose)
 (mu.hat<-exp(eta.hat)/(1+exp(eta.hat)))
+@
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Deviance for the binomial distribution}
+
+<<fig.height=4>>=
 # compare mu.hat with observed proportions
 plot(mu.hat,beetle$propn.dead)
 abline(0,1)
@@ -462,8 +494,21 @@ To evaluate whether dose has an effect, we will do something analogous to the mo
 <<propndead3,fig.width=6>>=
 null.glm<-glm(propn.dead~1,binomial(logit),
           weights=number,data=beetle)
-summary(null.glm)
+@
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Deviance for the binomial distribution}
+\tiny
+<<>>=
+summary(null.glm)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Deviance for the binomial distribution}
+
+<<echo=FALSE,fig.height=4>>=
 plot(beetle$dose,beetle$propn.dead,xlab="log concentration",
     ylab="proportion dead",main="minimal model")
 points(beetle$dose,null.glm$fitted,pch=4)
@@ -478,7 +523,22 @@ Add a term for dose. Now, the residual deviance is 11.2 on 6 dfs.
 <<propndead4,fig.width=6>>=
 dose.glm<-glm(propn.dead~dose,binomial(logit),
           weights=number,data=beetle)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Deviance for the binomial distribution}
+\tiny
+<<>>=
 summary(dose.glm)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Deviance for the binomial distribution}
+
+
+<<echo=FALSE,fig.height=4>>=
 plot(beetle$dose,beetle$propn.dead,xlab="log concentration",
     ylab="proportion dead",main="dose model")
 points(beetle$dose,dose.glm$fitted,pch=4)
@@ -491,7 +551,7 @@ points(beetle$dose,dose.glm$fitted,pch=4)
 The change in deviance from the null model is 284.2-11.2=273 on 1 df. Since the critical $\chi_1^2 = 3.84$, we reject the null hypothesis that $\beta_1 = 0$.
 
 You can do the model comparison using the anova function. Note that no statistical test is calculated; you need to do that yourself.
-
+\tiny
 <<>>=
 anova(null.glm,dose.glm)
 @
@@ -557,6 +617,11 @@ The $i$-th deviance residual is defined as:
 These can be used to check for model adequacy as discussed earlier in the context of linear models.
 One can just use the plot function inspect the residuals:
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Residuals in GLMs}
+
+
 <<residualsglm,fig.width=6>>=
 op<-par(mfrow=c(2,2),pty="s")
 plot(dose.glm)
@@ -568,7 +633,7 @@ plot(dose.glm)
 
 Alternatively, one can do this by hand:
 
-<<qqnormglm,fig.width=6>>=
+<<qqnormglm,echo=FALSE,fig.height=4>>=
 op<- par(mfrow=c(2,2),pty="s")
 plot(dose.glm$resid,
      xlab="index",ylab="residuals",main="Index plot")
@@ -593,6 +658,12 @@ library(lme4)
 fm_skip_lmer<-glmer(skip ~ word_complex+SC
                     +(1|subj)+(1|item),
                family=binomial(),hindi)
+@
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generalized linear mixed models}
+\tiny
+<<>>=
 summary(fm_skip_lmer)
 @
 
@@ -603,9 +674,20 @@ summary(fm_skip_lmer)
 Centering the predictors yields lower correlations of fixed effects:
 
 <<>>=
-fm_skip_lmer2<-glmer(skip ~ scale(word_complex,scale=FALSE)+
-                      scale(SC,scale=FALSE) +(1|subj)+(1|item),
+fm_skip_lmer2<-glmer(skip ~ scale(word_complex,
+                                  scale=FALSE)+
+                      scale(SC,scale=FALSE) 
+                     +(1|subj)+(1|item),
                family=binomial(),hindi)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generalized linear mixed models}
+
+
+\tiny
+<<>>=
 summary(fm_skip_lmer2)
 @
 
