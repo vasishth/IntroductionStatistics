@@ -43,7 +43,7 @@
 %\usecolortheme{seagull}
 \usecolortheme{lily}
 
-\title[Lecture 3]{Introduction to statistics: Calibrating errors and the t-test continued}
+\title[Lecture 3]{Introduction to statistics: Type I and II errors, and the t-test continued}
 
 \author{Shravan Vasishth}
 
@@ -281,7 +281,7 @@ t.test(sample)
 
 \begin{frame}[fragile]\frametitle{Type I error vs p-values}
 
-Type I error is the False Discovery Rate: the probability of your incorrectly rejecting the null under repeated sampling: 
+Type I error is the probability of your incorrectly rejecting the null under repeated sampling: 
 <<cache=TRUE>>=
 nsim<-10000
 n<-10
@@ -557,6 +557,7 @@ Of course, if your goal is to get an article published no matter what, such stop
 \item We learnt about the single sample t-test.
 \item We learnt about Type I, II error (and power).
 \item We learnt about Type M and Type S errors.
+\item We learnt how flexible stopping rules can inflate Type I error.
 \end{enumerate}
 
 \end{frame}
