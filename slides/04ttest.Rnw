@@ -317,7 +317,7 @@ We have repeated measures data on noun pronunciation durations, in seconds.
 \textbf{These data are in so-called wide form.}
   
   <<>>=
-  dataN2<-read.table("data/dataN2.txt",header=T)
+  dataN2<-read.table("data/dataN2.txt",header=TRUE)
 head(dataN2)
 
 xtabs(~Sentence+Speaker_id,dataN2)
@@ -480,7 +480,7 @@ Bruno Nicenboim, Timo B. Roettger, and Shravan Vasishth. Using meta-analysis for
   \end{frame}
 
 
-\begin{frame}[fragile]\frametitle{Class activity: Do a by items paired t-test}
+\begin{frame}[fragile]\frametitle{Quick exercise: Do a by items paired t-test}
 
 Given these data (download from moodle):
 
