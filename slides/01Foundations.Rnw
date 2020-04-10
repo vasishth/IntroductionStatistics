@@ -326,8 +326,6 @@ So, 10 coin tosses can be simulated as follows:
 rbinom(1,n=10,prob=0.5)
 @
 
-We switch now to class exercises.
-
 \end{frame}
 
 
@@ -471,8 +469,6 @@ For negative $x$ we write:
 \Phi (-x)= 1- \Phi (x),\quad -\infty < x < \infty
 \end{equation}
 
-See the shiny app for a visualization.
-
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Standard or unit normal random variable} 
@@ -489,26 +485,6 @@ pnorm(2,lower.tail=F)
 
 
 
-\begin{frame}[fragile]\frametitle{Standard or unit normal random variable} 
-
-If $Z$ is a standard normal random variable (SNRV) then
-
-\begin{equation}
-p\{ Z\leq -x\} = P\{Z>x\}, \quad -\infty < x < \infty
-\end{equation}
-
-Since $Z=((X-\mu)/\sigma)$ is an SNRV whenever $X$ is normally distributed with parameters $\mu$ and $\sigma$, then the CDF of $X$ can be expressed as:
-
-\begin{equation}
-F_X(a) = P\{ X\leq a \} = P\left( \frac{X - \mu}{\sigma} \leq \frac{a - \mu}{\sigma}\right) = \Phi\left( \frac{a - \mu}{\sigma} \right)
-\end{equation}
-
-The standardized version of a normal
-random variable X is used to compute specific probabilities relating to X.
-
-We will soon see the relevance of the SNRV in hypothesis testing.
-
-\end{frame}
 
 \subsection{Summary: dnorm, pnorm, qnorm}
 
@@ -606,7 +582,7 @@ store[i]<-prod(dbinom(x,size=10,prob=theta[i]))
 
 <<likfunplot,echo=FALSE,fig.height=4>>=
 plot(1:length(store),store,xaxt="n",xlab="theta",
-     ylab="f(x1,...,xn|theta")
+     ylab="f(x1,...,xn|theta",type="l")
 axis(1,at=1:length(theta),labels=theta)
 @
 
