@@ -423,6 +423,17 @@ summary(aovF)
 
 \begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
 
+Alternative syntax:
+<<>>=
+aovF2 <- aov(lm(DV ~ F, data=simdat2))
+summary(aovF2)
+@
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Example: simulated data with a three-level factor}
+
 \begin{itemize}
 \item
 Notice that the ANOVA only tells that there is some difference, not which conditions are different from which.
@@ -516,7 +527,7 @@ fractions(t(HcSum))
 
 \begin{frame}[fragile]\frametitle{The hypothesis matrix}
 
-The generalized inverse (details require matrix algebra, which we will just turn to):
+The generalized inverse (details require matrix algebra, see earlier lecture):
 
 <<>>=
 ginv2 <- function(x) 
@@ -564,8 +575,11 @@ $DV = X\beta +\varepsilon$, where X is:
 <<>>=
 head(round(model.matrix(m1_mr)))
 @
+\normalsize
 
-You can see that the model or design matrix X is based on the generalized inverse of the hypothesis matrix.
+You can see that the model or design matrix X is closely related to the generalized inverse of the hypothesis matrix.
+
+Recall that $\hat\beta = (X^TX)^{-1}X^T Y$, and $(X^TX)^{-1}X^T=X^+$ is the generalized inverse of the design matrix.
 
 \end{frame}
 
@@ -680,7 +694,7 @@ table4a
 \small
 <<>>=
 # ANOVA: B_A(2) times B_B(2)
-m2_aov <- aov(DV ~ A*B + Error(id), data=simdat4)
+m2_aov <- aov(lm(DV ~ A*B, data=simdat4))
 summary(m2_aov)
 @
 
@@ -694,6 +708,7 @@ m2_mr <- lm(DV ~ A*B, data=simdat4)
 summary(m2_mr)$coefficients
 @
 
+The ANOVA and t-test output from the lm() function  do not match! Why not?
 \end{frame}
 
 \begin{frame}[fragile]\frametitle{Two-by-two factorial designs}
