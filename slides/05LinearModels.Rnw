@@ -103,7 +103,8 @@ Now we are ready to look at linear modeling.
 <<message=FALSE,eval=FALSE,echo=FALSE>>=
 library(dplyr)
 gg05e1 <- read.table("data/GrodnerGibson2005E1.csv",
-                     sep=",", header=T)
+                     sep=",", 
+                     header=TRUE)
 gge1 <- gg05e1 %>% filter(item != 0)
 
 gge1 <- gge1 %>% mutate(word_positionnew = 
