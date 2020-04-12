@@ -262,7 +262,7 @@ In order to be able to identify $\beta$ from $X\beta$, the linear transformation
 
 This in turn requires that X be of full rank $p$.
 
-So, if X is an $n\times p$ matrix, then it is necessary that $n\geq p$. There must be at least as many observations as parameters. If this is not true, then the model is said to be \textbf{over-parameterized}.
+If X is an $n\times p$ matrix, then it is necessary that $n\geq p$. There must be at least as many observations as parameters. If this is not true, then the model is said to be \textbf{over-parameterized}.
 
 \end{frame}
 
@@ -489,11 +489,20 @@ An example:
 <<>>=
 hindi<-read.table("data/hindiJEMR.txt",header=TRUE)
 y<-as.matrix(hindi$TFT)
-x<-log(hindi$word_len)
+x<-scale(log(hindi$word_len),scale=FALSE)
 m0<-lm(y~x)
 @
 
 \end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
+\tiny
+<<>>=
+summary(m0)
+@
+\end{frame}
+
 
 \begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
 
@@ -538,12 +547,12 @@ What we have here is a bivariate normal distribution as an estimate of the $\bet
 \end{pmatrix}
 \sim 
 N(\begin{pmatrix}
-210.7777\\
-129.4064\\
+\Sexpr{beta[1,1]}\\
+\Sexpr{beta[2,1]}\\
 \end{pmatrix},
 \begin{pmatrix}
-31.35647 & -21.61119\\
--21.61119 & 16.88379\\
+\Sexpr{hat_var[1,1]} & \Sexpr{hat_var[1,2]}\\
+\Sexpr{hat_var[2,1]} & \Sexpr{hat_var[2,2]}\\
 \end{pmatrix})
 \end{equation}
 
@@ -566,12 +575,39 @@ where $\rho$ is the correlation between $\beta_0$ and $\beta_1$.
 \begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
 
 
-So $\hat\beta_0 \sim N(210.78,31.36)$ and $\hat\beta_1 \sim N(129.41,16.88)$, and $Cov(\beta_0,\beta_1)=-21.61$. So the correlation between the $\hat\beta$ is 
+So $\hat\beta_0 \sim N(\mu=\Sexpr{beta[1,1]},\sigma^2=\Sexpr{hat_var[1,1]})$ and $\hat\beta_1 \sim N(\Sexpr{beta[2,1]},\sigma^2=\Sexpr{hat_var[2,2]})$, and $Cov(\beta_0,\beta_1)=\Sexpr{hat_var[1,2]}$. So the correlation between the $\hat\beta$ is 
 
 <<>>=
 ## hat rho:
--21.61/(sqrt(31.36)*sqrt(16.88))
+hat_var[1,2]/(sqrt(hat_var[1,1])*sqrt(hat_var[2,2]))
 @
+
+This is the correlation between  the sampling distributions of $\beta_0$  and $\beta_1$. 
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{Exercise: The effect of centering}
+
+Above, we fit the model after centering   the predictor:
+
+<<>>=
+y<-as.matrix(hindi$TFT)
+## centering:
+x<-scale(log(hindi$word_len),scale=FALSE)
+m0<-lm(y~x)
+@
+
+Redo this model with x uncentered and unscaled:
+
+<<>>=
+y<-as.matrix(hindi$TFT)
+## no centering
+x<-log(hindi$word_len)
+m0<-lm(y~x)
+@
+
+What is the correlation between the sampling distributions of the intercept and slope now?
 
 \end{frame}
 
@@ -674,16 +710,16 @@ This means that
 \begin{frame}[fragile]\frametitle{The likelihood ratio test}
 
 
-So, we can write $\Lambda$ as:
+So, we can write $\log \Lambda=\ell$ as:
 
 \begin{equation}
-\Lambda = -\frac{1}{2\sigma^2}   n(\bar{X} - \mu_0)^2 
+\ell = -\frac{1}{2\sigma^2}   n(\bar{X} - \mu_0)^2 
 \end{equation}
 
 Rearranging terms:
 
 \begin{equation}
--2 \Lambda =    \frac{n(\bar{X} - \mu_0)^2 }{\sigma^2}
+-2 \ell =    \frac{n(\bar{X} - \mu_0)^2 }{\sigma^2}
 \end{equation}
 
 \end{frame}
@@ -694,10 +730,10 @@ Rearranging terms:
 Or maybe even more transparently:
 
 \begin{equation}
--2 \Lambda =    \frac{(\bar{X} - \mu_0)^2 }{\frac{\sigma^2}{n}}
+-2 \ell =    \frac{(\bar{X} - \mu_0)^2 }{\frac{\sigma^2}{n}}
 \end{equation}
 
-This should remind you of the Wald statistic we saw earlier--the t-test! Basically, all this
+This should remind you of the t-test! Basically, all this
 is saying is that we reject the null when $\mid \bar{X} - \mu_0\mid$ is
 large.
 
@@ -705,21 +741,21 @@ large.
 
 \begin{frame}[fragile]\frametitle{The likelihood ratio test}
 
-More generally, we will define the \textbf{likelihood ratio test statistic} as follows. Here, $L(\theta)$ refers to the likelihood given some value of $\theta$, and 
-$\ell(\theta)$ refers to the log likelihood.
+More generally, we will define the \textbf{likelihood ratio test statistic} as follows. Here, $\Lambda(\theta)$ refers to the likelihood given some value of $\theta$, and 
+$\ell(\theta)$ or $\log \Lambda$ refers to the log likelihood. $\Delta$ refers to the ratio (or difference, in log likelihood) of likelihood.
 
 \begin{equation}
 \begin{split}
-L =& -2\times \log (L(\theta_0)/L(\theta_1)) \\
-\log L=& -2\times \{\ell (\theta_0)-\ell(\theta_1)\}\\
-\log L =& -2 \times \{\ell(\theta_0) - \ell(\theta_1)\}
+\Delta \Lambda =& -2\times \log (\Lambda(\theta_0)/L(\theta_1)) \\
+\Delta \log \Lambda=& -2\times \{\ell (\theta_0)-\ell(\theta_1)\}\\
+\Delta \log \Lambda =& -2 \times \{\ell(\theta_0) - \ell(\theta_1)\}
 \end{split}
 \end{equation}
 
-where $\theta_1$ and $\theta_0$ are the estimates of $\theta$ under the alternative and null hypotheses, respectively. The likelihood ratio test rejects $H_0$ if $\log L$ is sufficiently large. As the sample size approaches infinity:
+where $\theta_1$ and $\theta_0$ are the estimates of $\theta$ under the alternative and null hypotheses, respectively. The likelihood ratio test rejects $H_0$ if $\Delta \log \Lambda$ is sufficiently large. As the sample size approaches infinity:
 
 \begin{equation}
-\log L \rightarrow \chi_r^2  \hbox{ as }  n \rightarrow \infty
+\log \Lambda \rightarrow \chi_r^2  \hbox{ as }  n \rightarrow \infty
 \end{equation}
 
 where $r$ is called the degrees of freedom and is the difference in the number of parameters under $H_1$ and $H_0$. 
@@ -739,7 +775,7 @@ or in Lehmann's \textit{Testing Statistical Hypotheses}.
 Note that sometimes you will see the form:
 
 \begin{equation}
-\log L = 2 \{\ell(\theta_1) - \ell(\theta_0)\}
+\Delta \log \Lambda = 2 \{\ell(\theta_1) - \ell(\theta_0)\}
 \end{equation}
 
 It should be clear that both statements are saying the same thing; in the second case, we are just subtracting the null hypothesis log likelihood from the alternative hypothesis log likelihood.
@@ -776,13 +812,20 @@ m1<-lm(y~x)
 @
 
 <<>>=
-lambda<- -2*(logLik(m0)-logLik(m1))
+deltalambda<- -2*(logLik(m0)-logLik(m1))
 ## observed value:
-lambda[1]
+deltalambda[1]
 ## critical value:
 qchisq(0.95,df=1)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+<<>>=
 # p-value:
-pchisq(lambda[1],df=1,lower.tail=FALSE)
+pchisq(deltalambda[1],df=1,lower.tail=FALSE)
 @
 
 \end{frame}
@@ -792,9 +835,9 @@ pchisq(lambda[1],df=1,lower.tail=FALSE)
 
 Here, we fit the null hypothesis model which only has an intercept term $\beta_0$, and the alternative model that has $\beta_1$ as well. 
 
-Finally, we compare the $\lambda$ with the critical chi-squared value for degrees of freedom 1.
+Finally, we compare the $\Delta \Lambda$ with the critical chi-squared value for degrees of freedom 1.
 
-We also computed the probability of getting a $\lambda$ as extreme as we got assuming that the null is true:
+We also computed the probability of getting a $\Delta\Lambda$ as extreme as we got assuming that the null is true:
 
 \end{frame}
 
@@ -803,7 +846,7 @@ We also computed the probability of getting a $\lambda$ as extreme as we got ass
 
 Note that in the likelihood test above, we are comparing one nested model against another: the null hypothesis model is nested inside the alternative hypothesis model.  
 
-What this means is that the alternative hypothesis model contains all the parameters in the null hypothesis model plus some others.
+What this means is that the alternative hypothesis model contains all the parameters in the null hypothesis model (i.e., the intercept) plus another one (the slope).
 
 \end{frame}
 
