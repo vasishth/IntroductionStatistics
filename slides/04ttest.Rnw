@@ -319,7 +319,13 @@ We have repeated measures data on noun pronunciation durations, in seconds.
   <<>>=
   dataN2<-read.table("data/dataN2.txt",header=TRUE)
 head(dataN2)
+@
 
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Example of INCORRECT pair-wise t-test}
+
+<<>>=
 xtabs(~Sentence+Speaker_id,dataN2)
 @
   
