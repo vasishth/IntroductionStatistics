@@ -114,9 +114,9 @@ $\vdots$
 \end{frame}
 
 
-\begin{frame}\frametitle{Probability mass/distribution function}
+\begin{frame}\frametitle{Probability mass/density function}
 
-Every discrete random variable X has associated with it a \textbf{probability mass function (PMF)}. Continuous RVs have \textbf{probability distribution functions} (PDFs). We will call both PDFs (for simplicity).
+Every discrete random variable X has associated with it a \textbf{probability mass function (PMF)}. Continuous RVs have \textbf{probability density functions} (PDFs). We will call both PDFs (for simplicity).
 
 \begin{equation}
 p_X : S_X \rightarrow [0, 1] 
