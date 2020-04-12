@@ -561,14 +561,14 @@ N(\begin{pmatrix}
 \begin{frame}[fragile]\frametitle{The mean and variance of the parameters beta}
 
 
-The variance of a bivariate distribution has the variances along the diagonal, and the covariance between $\beta_0$ and 
-$\beta_1$ on the off-diagonals. Covariance is defined as:
+The variance of a bivariate distribution has the variances along the diagonal, and the covariance between $\hat\beta_0$ and 
+$\hat\beta_1$ on the off-diagonals. Covariance is defined as:
 
 \begin{equation}
 Cov(\hat\beta_0,\hat\beta_1)=\rho \sigma_{\hat\beta_0}\sigma_{\hat\beta_1}
 \end{equation}
 
-where $\rho$ is the correlation between $\beta_0$ and $\beta_1$.
+where $\rho$ is the correlation between $\hat\beta_0$ and $\hat\beta_1$.
 
 \end{frame}
 
@@ -742,7 +742,9 @@ large.
 \begin{frame}[fragile]\frametitle{The likelihood ratio test}
 
 More generally, we will define the \textbf{likelihood ratio test statistic} as follows. Here, $\Lambda(\theta)$ refers to the likelihood given some value of $\theta$, and 
-$\ell(\theta)$ or $\log \Lambda$ refers to the log likelihood. $\Delta$ refers to the ratio (or difference, in log likelihood) of likelihood.
+$\ell(\theta)$ or $\log \Lambda$ refers to the log likelihood. 
+
+$\Delta$ is used to stress the fact that  we are talking about the ratio (or difference, in log likelihood) of likelihood. We could  have  just used $\Lambda$ or $\ell$.
 
 \begin{equation}
 \begin{split}
