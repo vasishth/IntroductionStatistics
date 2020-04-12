@@ -445,6 +445,12 @@ That is, we additionally assume that $u_{1i} \sim Normal(0,\sigma_{u1})$.
 <<>>=
 m1.lmer<-lmer(logrt~so+(1+so||subject),dat)
 @
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Linear mixed models}
+\framesubtitle{Varying intercepts and slopes by subject}
+
+
 \small
 \begin{verbatim}
 Random effects:
@@ -1252,7 +1258,7 @@ See: http://idiom.ucsd.edu/~rlevy/papers/barr-etal-2013-jml.pdf
 
 The likelihood ratio test (aka analysis of variance or anova)
 
-We compare the ratios of the likelihoods of the two models of interest. 
+We compare the ratios of the likelihoods of the two models of interest (= difference in log likelihoods). 
 
 For technical reasons, we have to set a value REML to FALSE in the lmer function when doing model comparison. If you forget to do it, lmer will automatically do it for you.
 
@@ -1279,7 +1285,7 @@ logLik(m1)
 \item
 You can see that the ratio is 1. 
 \item
-The ratio of the log likelihoods follows a chi-square distribution with the parameter degrees of freedom (df) being the difference in the number of parameters in the two models being compared. 
+The difference of the log likelihoods follows a chi-square distribution with the parameter degrees of freedom (df) being the difference in the number of parameters in the two models being compared. 
 \item
 In model m0 there are 4 parameters, and in m1 there are 5, so the difference is df=1. 
 \item
@@ -1305,7 +1311,7 @@ abline(v=crit_chisq)
 \begin{frame}[fragile]\frametitle{Model selection}
 \framesubtitle{Example: Chinese relative clause data} 
 
-If the ratio is bigger than the critical chi-squared value (for a given degree of freedom), then we reject the null hypothesis that the two models have the same log likelihoods. 
+If the difference in log likelihoods is bigger than the critical chi-squared value (for a given degree of freedom), then we reject the null hypothesis that the two models have the same log likelihoods. 
 
 If there is no evidence for one model being better, then we choose the simpler model, on grounds of parsimony (Occam's razor). 
 
