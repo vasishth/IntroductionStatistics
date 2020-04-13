@@ -1283,7 +1283,7 @@ logLik(m1)
 
 \begin{itemize}
 \item
-You can see that the ratio is 1. 
+You can see that there is no difference in  log likelihoods. 
 \item
 The difference of the log likelihoods follows a chi-square distribution with the parameter degrees of freedom (df) being the difference in the number of parameters in the two models being compared. 
 \item
