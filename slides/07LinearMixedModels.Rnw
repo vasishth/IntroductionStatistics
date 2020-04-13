@@ -44,7 +44,7 @@
 %\usecolortheme{seagull}
 \usecolortheme{lily}
 
-\title[Lecture 6]{Introduction to statistics: Linear mixed models}
+\title[Lecture 7]{Introduction to statistics: Linear mixed models}
 
 \author{Shravan Vasishth}
 
