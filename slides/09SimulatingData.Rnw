@@ -613,7 +613,7 @@ t.test(rt~cond,sim_dat,paired=TRUE,var.equal=TRUE)
 
 \begin{frame}[fragile]\frametitle{Generating within-subjects data}
 
-
+\tiny
 <<cache=TRUE>>=
 nsim<-1000
 pvals<-tvals_lmer<-rep(NA,nsim)
@@ -622,7 +622,7 @@ for(i in 1:nsim){
   sim_dat$rt <- round(725 + rep(subject_adj,2) + 
                         25 * cond + rnorm(2*n,0,200))
 pvals[i]<-t.test(rt~cond,sim_dat,paired=TRUE)$p.value
-tvals_lmer<-summary(lmer(rt~cond+(1|subj),sim_dat,
+tvals_lmer[i]<-summary(lmer(rt~cond+(1|subj),sim_dat,
                          control=lmerControl(calc.derivs=FALSE)))$coefficients[2,3]}
 ## power using paired t-test:
 mean(pvals<0.05)
@@ -839,6 +839,7 @@ m3<-lmer(rt~cond+(1+cond|subj),sim_dat,
 
 You should get output like this (obviously, the numbers will be different for you  as  we are randomly generating data):
 
+\tiny
 <<>>=
 summary(m3)
 @
@@ -885,9 +886,9 @@ and for subject relatives:
 \framesubtitle{By-subject adjustments to mean slope}
 
 
-We can also plot the variability in the mean SR and and the mean OR effect. In this plot, the circles refer to object relatives, and the square with the cross inside it to subject relatives.
+We can also plot the by-subject variability in the mean SR and and the mean OR effect. In this plot, the circles refer to object relatives, and the square with the cross inside it to subject relatives.
 
-<<>>=
+<<echo=FALSE,fig.height=3>>=
 ## ORs
 plot(1:10,(25+u1)*1,
      xlab="subject",
@@ -896,6 +897,11 @@ plot(1:10,(25+u1)*1,
 points(1:10,(20+u1)*(-1),pch=12)
 abline(h=25)
 @
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{By-subject adjustments to mean slope}
 
 We can now generate data that incorporates this additional assumption, that each subject has different slopes:
 
@@ -920,6 +926,7 @@ sim_dat$rt<-rt
 
 We can visualize the RC by-subject effects. First, I  define  a plotting function:
 
+\tiny
 <<>>=
 library(ggplot2)
 gg_xyplot <- function(x, y, formula, shape, size, 
@@ -944,7 +951,7 @@ gg_xyplot <- function(x, y, formula, shape, size,
 \begin{frame}[fragile]\frametitle{Replicates  from each  subject}
 \framesubtitle{By-subject adjustments to mean slope}
 
-<<echo=FALSE>>=
+<<echo=FALSE,fig.height=4>>=
 gg_xyplot(x = "cond", y = "rt",  ~ subj,  
           shape = 1, size = 3, 
           data = sim_dat)
@@ -967,6 +974,7 @@ m3<-lmer(rt~cond + (1+cond||subj),sim_dat)
 
 \begin{frame}[fragile]\frametitle{Replicates  from each  subject}
 \framesubtitle{By-subject adjustments to mean slope}
+\tiny
 
 
 The output should look something like this (the numbers will vary for each of you).
@@ -1010,6 +1018,7 @@ Notice that there are \textbf{three} variance components:
 
 The model estimates these standard deviations. Here is what I got (the three standard deviations' estimates are shown in order):
 
+\tiny
 \begin{verbatim}
 Random effects:
  Groups    Name        Variance Std.Dev.
@@ -1034,8 +1043,16 @@ n<-10
 k<-20
 ## generate data frame with subject and condition column:
 cond<-rep(c(-1,1),each=n*k)
-sim_dat<-data.frame(sub=rep(rep(1:n,each=k),2),
+sim_dat<-data.frame(subj=rep(rep(1:n,each=k),2),
                  cond=cond)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Replicates  from each  subject}
+\framesubtitle{A more sophisticated method for generating random slopes}
+
+<<>>=
 head(sim_dat)
 @
 
@@ -1086,6 +1103,7 @@ Now, what we will do is that \textbf{for each row} i in the sim\_dat data frame 
 \begin{frame}[fragile]\frametitle{Replicates  from each  subject}
 \framesubtitle{A more sophisticated method for generating random slopes}
 
+\tiny
   
 <<>>=
 ## record the number of rows in the data frame dat:
