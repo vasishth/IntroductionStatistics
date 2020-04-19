@@ -147,7 +147,7 @@ abline(coef(fm))
 
 \begin{frame}[fragile]\frametitle{Logistic regression}
 
-The interpretation of the coefficients is making little sense here.
+The interpretation of the coefficients does not in general make sense here because it can land you outside the [0,1] probability range.
 
 Clearly the linear model is failing us. This is the motivation for the generalized linear model. 
 
@@ -645,6 +645,33 @@ fm_skip_lmer2<-glmer(skip ~ scale(word_complex,
 <<>>=
 summary(fm_skip_lmer2)
 @
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generalized linear mixed models}
+
+Model comparison is done the same way as before, using anova().
+
+<<>>=
+fm_skip_lmer2NULL<-glmer(skip ~ 
+                      scale(SC,scale=FALSE) 
+                     +(1|subj)+(1|item),
+               family=binomial(),hindi)
+@
+
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Generalized linear mixed models}
+
+Model comparison is done the same way as before, using anova().
+\tiny
+<<>>=
+## the effect of word complexity
+anova(fm_skip_lmer2NULL,fm_skip_lmer2)
+@
+\normalsize
+Caveat: this model is overly simple, it has no varying slopes. A proper investigation would have to include varying slopes for both predictors.
 
 \end{frame}
 
