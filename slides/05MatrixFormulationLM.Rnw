@@ -44,7 +44,7 @@
 %\usecolortheme{seagull}
 \usecolortheme{lily}
 
-\title[Lecture 5]{Introduction to statistics: Matrix formulatuon of the linear model}
+\title[Lecture 5]{Introduction to statistics: Matrix formulation of the linear model}
 
 \author{Shravan Vasishth}
 
@@ -754,7 +754,14 @@ $\Delta$ is used to stress the fact that  we are talking about the ratio (or dif
 \end{split}
 \end{equation}
 
-where $\theta_1$ and $\theta_0$ are the estimates of $\theta$ under the alternative and null hypotheses, respectively. The likelihood ratio test rejects $H_0$ if $\Delta \log \Lambda$ is sufficiently large. As the sample size approaches infinity:
+where $\theta_1$ and $\theta_0$ are the estimates of $\theta$ under the alternative and null hypotheses, respectively. The likelihood ratio test rejects $H_0$ if $\Delta \log \Lambda$ is sufficiently large.
+
+\end{frame}
+
+
+\begin{frame}[fragile]\frametitle{The likelihood ratio test}
+
+As the sample size approaches infinity:
 
 \begin{equation}
 \log \Lambda \rightarrow \chi_r^2  \hbox{ as }  n \rightarrow \infty
