@@ -1,0 +1,252 @@
+---
+title: 'Simulating data: Latin-square designs'
+author: "Shravan Vasishth"
+date: "6/13/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this lecture, we will learn to generate simulated data with a Latin-square repeated measures design.
+
+## Define a function for generating data
+
+```{r}
+library(MASS)
+## assumes that no. of subjects and no. of items is divisible by 4.
+gen_sim_lnorm2x2<-function(nitem=24,
+                         nsubj=28,
+                         beta=NULL,
+                         Sigma_u=NULL, # subject vcov matrix
+                         Sigma_w=NULL, # item vcov matrix
+                         sigma_e=NULL){
+  ## prepare data frame for a four-condition latin square:
+  g1<-data.frame(item=1:nitem,
+                 cond=rep(letters[1:4],nitem/4))
+  g2<-data.frame(item=1:nitem,
+                 cond=rep(letters[c(2,3,4,1)],nitem/4))
+  g3<-data.frame(item=1:nitem,
+                 cond=rep(letters[c(3,4,1,2)],nitem/4))
+  g4<-data.frame(item=1:nitem,
+                 cond=rep(letters[c(4,1,2,3)],nitem/4))
+  
+  
+  ## assemble data frame:
+  gp1<-g1[rep(seq_len(nrow(g1)), 
+              nsubj/4),]
+  gp2<-g2[rep(seq_len(nrow(g2)), 
+              nsubj/4),]
+  gp3<-g3[rep(seq_len(nrow(g3)), 
+              nsubj/4),]
+  gp4<-g4[rep(seq_len(nrow(g4)), 
+              nsubj/4),]
+  simdat<-rbind(gp1,gp2,gp3,gp4)
+  
+  ## add subject column:
+  simdat$subj<-rep(1:nsubj,each=nitem)
+  
+  ## add contrast coding:
+  ## main effect 1:
+  simdat$c1<-ifelse(simdat$cond%in%c("a","b"),-1/2,1/2)
+  ## main effect 2: 
+  simdat$c2<-ifelse(simdat$cond%in%c("a","c"),-1/2,1/2)
+  ## interaction:
+  simdat$c3<-ifelse(simdat$cond%in%c("a","d"),-1/2,1/2)
+  
+  ## subject random effects:
+  u<-mvrnorm(n=length(unique(simdat$subj)),
+             mu=c(0,0,0,0),Sigma=Sigma_u)
+  
+  ## item random effects
+  w<-mvrnorm(n=length(unique(simdat$item)),
+             mu=c(0,0,0,0),Sigma=Sigma_w)
+
+  ## generate data row by row:  
+  N<-dim(simdat)[1]
+  rt<-rep(NA,N)
+  for(i in 1:N){
+    rt[i] <- rlnorm(1,beta[1] + 
+                      u[simdat[i,]$subj,1] +
+                      w[simdat[i,]$item,1] + 
+                      (beta[2]+u[simdat[i,]$subj,2]+
+                         w[simdat[i,]$item,2])*simdat$c1[i]+
+                      (beta[3]+u[simdat[i,]$subj,3]+
+                         w[simdat[i,]$item,3])*simdat$c2[i]+
+                      (beta[4]+u[simdat[i,]$subj,4]+
+                         w[simdat[i,]$item,4])*simdat$c3[i],
+                   sigma_e) 
+  }   
+  simdat$rt<-rt
+  simdat$subj<-factor(simdat$subj)
+  simdat$item<-factor(simdat$item)
+  simdat}
+```
+
+# Obtain estimates from a previous study
+
+First we load the data. These data are from a well-known paper:
+
+Levy, R.P. and Keller, F., 2013. Expectation and locality effects in German verb-final structures. Journal of memory and language, 68(2), pp.199-222.
+
+This is a $2\times 2$ factorial design. We won't concern ourselves with the details of the design, but see the above paper if interested. For the present purposes we are only interested in whether we can find statistically significant any main effects or an interaction. 
+
+```{r}
+dat <- read.table('data/levykeller2013E1.txt', header=TRUE)
+
+## create condition columns:
+condition<-ifelse(dat$dat=="sub" & dat$adj=="sub","a",
+                  ifelse(dat$dat=="sub" & dat$adj=="main","b",
+                         ifelse(dat$dat=="main" & dat$adj=="sub","c", 
+                                ifelse(dat$dat=="main" & dat$adj=="main","d","NA"))))
+
+dat$condition<-factor(condition)
+
+# contrast coding: 
+dat$dat<-ifelse(dat$condition%in%c("a","b"),1/2,-1/2)
+dat$adj<-ifelse(dat$condition%in%c("b","d"),-1/2,1/2)
+dat$int<-ifelse(dat$condition%in%c("b","c"),-1/2,1/2)
+
+                 ## ME DAT ## ME PP-ADJ ## INT
+# a DAT-SC; PP-SC    0.5         0.5       0.5    
+# b DAT-SC; PP-MC    0.5        -0.5      -0.5
+# c DAT-MC; PP-SC   -0.5         0.5      -0.5
+# d DAT-MC; PP-MC   -0.5        -0.5       0.5
+
+# remove zeros
+dat_nozeros <- dat[dat$region7 != 0,]
+```
+
+Next, fit a maximal model. Ignore the singularity warning as it won't affect us in our simulations.
+
+```{r}
+library(lme4)
+## analyze the critical region:
+m<-lmer(log(region7) ~ dat+adj+int + 
+          (dat+adj+int|subj) + 
+          (dat+adj+int|item), 
+        data=dat_nozeros)
+## Ignore singularity warning
+```
+
+The model summary shows a strong effect of the factor dat:
+
+```{r}
+summary(m)$coefficients
+```
+
+Let's focus on that effect for our power analysis. What is the prospective power of detecting this effect \textbf{for a future  study}? Note that we should never compute power for an existing study---this is called post-hoc power. This is a nonsensical quantity to compute because once the p-value  is known, the power is just a transformation of the p-value:
+
+Hoenig, J.M. and Heisey, D.M., 2001. The abuse of power: the pervasive fallacy of power calculations for data analysis. The American Statistician, 55(1), pp.19-24.
+
+However, be aware that many people compute post-hoc power; just ignore them if they insist that you do and point them to the above paper. 
+
+What we are doing below will look like post-hoc power because we are using existing data to compute power. However, what is crucially different in our approach is that (a) we remain unsure about the true effect, (b) we are making a statement about what the power properties would be if we ran the same study again, with new subjects, but in the same environment (lab, etc.). We are not making any claim about the power properties of the  \textbf{current} experiment. That ship has already sailed, the data are already at hand! It's too late to compute power, which is only relevant for a design to be run in the future.
+
+## Decide on a range of plausible values of the effect size
+
+Notice that the effect in milliseconds is relatively large:
+
+```{r}
+b0<-summary(m)$coefficients[1,1]
+b1<-summary(m)$coefficients[2,1]
+## effect estimate:
+exp(b0+b1*(0.5))-exp(b0+b1*(-0.5))
+```
+
+But it could be as small or as large as:
+
+```{r}
+b1_stderr<-summary(m)$coefficients[2,2]
+lower<-b1-2*b1_stderr
+upper<-b1+2*b1_stderr
+lower;upper
+```
+
+The above range arises because the range of plausible effect sizes is between \hat\beta_1 \pm 2SE$ on the log ms scale.
+
+On the ms scale:
+
+```{r}
+exp(b0+lower*(0.5))-exp(b0+lower*(-0.5))
+exp(b0+upper*(0.5))-exp(b0+upper*(-0.5))
+```
+
+On the ms scale we see that that's a \textbf{lot} of uncertainty! With some experience, you will come to recognize that such a wide confidence bound is a sign of low power. We will just establish the prospective power properties of this study in a minute.
+
+We can take the above uncertainty of the $\hat\beta_1$ estimator into account (on the log ms scale---remember that the model is based on log rt) by assuming that the effect has the following uncertainty on the log ms scale: 
+
+$\hbox{effect } \sim Normal(0.15,0.06)$
+
+Here, we are doing something that is, strictly speaking, Bayesian in thinking. We are describing our uncertainty about the true effect from the best estimate we have---existing data. To talk about the uncertainty, we are (ab)using the 95\% confidence interval (treating it like its telling us the range of plausible values). A strict frequentist cannot talk about the probability distribution of the effect size---for them, the true value of the parameter is a point value, it has no distribution. For them, the $\hat\beta_1 \pm 2\times SE$ range is referring to the estimated mean of the sampling distribution of the sample means, and the SE of this sampling distribution. In frequentist thinking, this range does not reflect our uncertainty about the true parameter's value.
+
+However, it is actually sensible to take this Bayesian approach because we have no idea what the true effect size is, but we could compute (as Bayesians) a range of plausible values. And as I mentioned earlier, in most studies we encounter in psycholinguistics, the frequentist confidence interval and the Bayesian credible interval are very similar. Of course, one should check that they are---and I did, but I haven't shown it here. I computed the Bayesian LMM of Levy and Keller's Expt 1 data here, and you can compare my lmer estimates with the Bayesian ones: 
+
+Shravan Vasishth, Daniela Mertzen, Lena A. Jäger, and Andrew Gelman. The statistical significance filter leads to overoptimistic expectations of replicability. Journal of Memory and Language, 103:151-175, 2018.
+ 
+ ## Extract parameter estimates
+
+```{r}
+## set "true" parameter values:
+beta<-round(summary(m)$coefficients[,1],4)
+sigma_e<-round(attr(VarCorr(m),"sc"),4)
+subj_ranefsd<-round(attr(VarCorr(m)$subj,"stddev"),4)
+subj_ranefcorr<-round(attr(VarCorr(m)$subj,"corr"),1)
+## choose some intermediate values for correlations:
+corr_matrix<-(diag(4) + matrix(rep(1,16),ncol=4))/2
+
+## assemble variance-covariance matrix for subjects:
+Sigma_u<-SIN::sdcor2cov(stddev=subj_ranefsd,corr=corr_matrix)
+
+item_ranefsd<-round(attr(VarCorr(m)$item,"stddev"),4)
+
+## assemble variance matrix for items:
+Sigma_w<-SIN::sdcor2cov(stddev=item_ranefsd,corr=corr_matrix)
+```
+
+## Simulate data to compute power
+
+```{r cache=TRUE}
+set.seed(4321)
+nsim<-100
+## effect size possibilities:
+b1_est<-rnorm(100,mean=0.15,sd=0.06)
+estc1<-tvalsc1<-tvalsc2<-tvalsc3<-matrix(rep(NA,nsim*length(b1_est)),ncol=nsim)
+failed<-matrix(rep(0,nsim*length(b1_est)),ncol=nsim)
+for(j in 1:length(b1_est)){
+for(i in 1:nsim){
+  beta[2]<-b1_est[j]
+  dat<-gen_sim_lnorm2x2(nitem=24,
+                         nsubj=28,
+                       beta=beta,
+                       Sigma_u=Sigma_u,
+                       Sigma_w=Sigma_w,
+                      sigma_e=sigma_e)
+
+## no correlations estimated to avoid convergence problems: 
+## analysis done after log-transforming:  
+m<-lmer(log(rt) ~ c1+c2+c3 + (c1+c2+c3||subj) + 
+          (c1+c2+c3||item), data=dat)
+estc1[j,i]<-round(summary(m)$coefficients[2,1],4)
+## ignore failed trials
+if(any( grepl("failed to converge", m@optinfo$conv$lme4$messages) )){
+  failed[j,i]<-1
+} else{
+tvalsc1[j,i]<-summary(m)$coefficients[2,3]
+tvalsc2[j,i]<-summary(m)$coefficients[3,3]
+tvalsc3[j,i]<-summary(m)$coefficients[4,3]
+}}}
+## proportion of convergence failures:
+rowMeans(failed)
+```
+##  Compute power
+
+```{r}
+pow<-rep(NA,length(b1_est))
+for(k in 1:length(b1_est)){
+  pow[k]<-mean(abs(tvalsc1[k,])>2,na.rm=TRUE)
+}
+
+hist(pow)
+```
