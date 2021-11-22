@@ -116,7 +116,7 @@ $\vdots$
 
 \begin{frame}\frametitle{Probability mass/density function}
 
-Every discrete random variable X has associated with it a \textbf{probability mass function (PMF)}. Continuous RVs have \textbf{probability density functions} (PDFs). We will call both PDFs (for simplicity).
+Every discrete random variable X has associated with it a \textbf{probability mass function (PMF)}. Continuous RVs have a \textbf{probability density function} (PDF). We will call both PDFs (for simplicity).
 
 \begin{equation}
 p_X : S_X \rightarrow [0, 1] 
@@ -319,11 +319,27 @@ F(a)=\sum_{\hbox{all } x \leq a} p(x)
 
 \begin{frame}[fragile]\frametitle{Generating random binomial data}
 
+\tiny 
 We can use the \textbf{rbinom} function to generate binomial data.
-So, 10 coin tosses can be simulated as follows:
+So, the outcome of 10 coin tosses in a single experiment can be simulated as follows:
 
 <<>>=
-rbinom(1,n=10,prob=0.5)
+## no. of successes randomly generated:
+rbinom(n=1,size=10,prob=0.5)
+@
+
+The outcome of 20 experiments:
+
+<<>>=
+## no. of successes randomly generated:
+rbinom(n=20,size=10,prob=0.5)
+@
+
+
+Alternatively, we can print out, in a single experiment (size=1), a random sequence of successes and failures in a sample size of n=10. 
+
+<<>>=
+rbinom(n=10,size=1,prob=0.5)
 @
 
 \end{frame}
@@ -344,7 +360,7 @@ We write $X\sim \mathtt{norm}(\mathtt{mean}=\mu,\,\mathtt{sd}=\sigma)$.
 
 The associated $\texttt{R}$ function for the pdf is \texttt{dnorm(x, mean = 0, sd = 1)}, and the one for cdf is \texttt{pnorm}.
 
-Note the default values for $\mu$ and $\sigma$ are 0 and 1 respectively. Note also that R defines the PDF in terms of $\mu$ and $\sigma$, not $\mu$ and $\sigma^2$ ($\sigma^2$ is the norm in statistics textbooks).
+Note the default values for $\mu$ and $\sigma$ are 0 and 1 respectively. Note also that R defines the PDF in terms of $\mu$ and $\sigma$, not $\mu$ and $\sigma^2$ ($\sigma^2$ is the convention in statistics textbooks).
 
 \end{frame}
 
@@ -445,11 +461,11 @@ This will turn out to be very useful in statistical inference.
 
 If $X$ is normally distributed with parameters $\mu$ and $\sigma$, then $Z=(X-\mu)/\sigma$ is normally distributed with parameters $\mu=0,\sigma = 1$.
 
-We conventionally write $\Phi (x)$ for the CDF of N(0,1):
+We conventionally write $\Phi (a)$ for the CDF of N(0,1):
 
 \begin{equation}
-\Phi (x)=\frac{1}{\sqrt{2\pi}} \int_{-\infty}^{x}  e^{\frac{-y^2}{2}} \, dy 
-\quad \textrm{where } y=(x-\mu)/\sigma
+\Phi (a)=\frac{1}{\sqrt{2\pi}} \int_{-\infty}^{a}  e^{\frac{-z^2}{2}} \, dz 
+\quad \textrm{where } z=(x-\mu)/\sigma
 \end{equation}
 
 \end{frame}
@@ -478,7 +494,7 @@ In R:
 <<negativexpnorm>>=
 1-pnorm(2)
 ## alternatively:
-pnorm(2,lower.tail=F)
+pnorm(2,lower.tail=FALSE)
 @
 
 \end{frame}
@@ -509,7 +525,74 @@ We will be using the t-distribution's dt, pt, and qt functions a lot in statisti
 
 \end{frame}
 
+\section{Bivariate and multivariate distributions}
 
+\begin{frame}[fragile]\frametitle{Visualizing bivariate distributions}
+
+First, a visual of two uncorrelated normal RVs:
+
+<<echo=FALSE,fig.height=5>>=
+library(MASS)
+
+bivn<-mvrnorm(1000,mu=c(0,1),Sigma=matrix(c(1,0,0,2),2))
+bivn.kde<-kde2d(bivn[,1],bivn[,2],n=50)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated bivariate normal density")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate normal distributions}
+
+And here is an example of a positively correlated case: 
+
+<<echo=FALSE,fig.height=5>>=
+bivn<-mvrnorm(1000,mu=c(0,1),Sigma=matrix(c(1,0.9,0.9,2),2))
+bivn.kde<-kde2d(bivn[,1],bivn[,2],n=50)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated bivariate normal density")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Bivariate normal distributions}
+
+And here is an example with a negative correlation:
+
+<<echo=FALSE,fig.height=5>>=
+bivn<-mvrnorm(1000,mu=c(0,1),
+              Sigma=matrix(c(1,-0.9,-0.9,2),2))
+bivn.kde<-kde2d(bivn[,1],bivn[,2],n=50)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated bivariate normal density")
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Plotting dynamically rotable bivariate distributions}
+
+<<eval=FALSE>>=
+library(emdbook)
+ library(rgl)
+ curve3d(dmvnorm(c(x,y),mu=c(0,0),Sigma=diag(2)),
+         sys3d="rgl",col="blue",
+         xlim=c(-3,3),ylim=c(-3,3))
+@
+
+\end{frame}
+
+\begin{frame}[fragile]\frametitle{Visualizing conditional distributions}
+
+You can run the following code to get a visualization of what a conditional distribution looks like when we take ``slices'' from the conditioning random variable:
+
+<<eval=FALSE,echo=TRUE>>=
+for(i in 1:50){
+  plot(bivn.kde$z[i,1:50],type="l",ylim=c(0,0.1))
+  Sys.sleep(.5)
+}
+@
+
+\end{frame}
 
 \section{Maximum Likelihood Estimation}
 
@@ -546,7 +629,9 @@ $P(X_1=x_1,X_2=x_2,\dots,X_n=x_n)$
 $= f(X_1=x_1,X_2=x_2,\dots,X_n=x_n;\theta)$
 
 So, the above probability is a function of $\theta$. 
-When this quantity is expressed as a function of $\theta$, we call it the \textbf{likelihood function}.
+When this quantity is expressed as a function of $\theta$, we call it the \textbf{likelihood function}, and it is written as follows:
+
+$\mathcal{L}(\theta;x_1,\dots,x_n)$.
 
 \end{frame}
 
@@ -591,16 +676,16 @@ axis(1,at=1:length(theta),labels=theta)
 \begin{frame}\frametitle{MLE: The binomial distribution}
 \framesubtitle{Detailed derivations: see lecture notes}
 
-We can obtain this estimate of $\theta$ that maximizes likelihood by computing:
+Given a single experiment of size n that yields k successes, we can obtain this estimate of $\theta$ that maximizes likelihood by computing:
 
 \begin{equation}
-\hat \theta = \frac{x}{n}
+\hat \theta = \frac{k}{n}
 \end{equation}
 
-where $n$ is sample size, and $x$ is the number of successes.
+where $n$ is sample size, and $k$ is the number of successes.
 
 \medskip
-For the analytical derivation, see the Linear Modeling lecture notes:
+For a mathematical proof, see the Linear Modeling lecture notes:
 https://github.com/vasishth/LM
 
 \end{frame}
@@ -619,13 +704,13 @@ For the normal distribution, where $X \sim N(\mu,\sigma)$, we can get MLEs of $\
 and
 
 \begin{equation}
-	\hat \sigma ^2 = \frac{1}{n}\sum (x_i-\bar{x})^2
+	\hat \sigma ^2 = \frac{1}{n}\sum (x_i-\bar{x})^2 = s^2
 \end{equation}
 
 you will sometimes see the ``unbiased'' estimate (and this is what R computes) but for large sample sizes the difference is not important:
 
 \begin{equation}
-  \hat \sigma ^2 = \frac{1}{n-1}\sum (x_i-\bar{x})^2
+  \hat \sigma ^2 = \frac{1}{n-1}\sum (x_i-\bar{x})^2 = s^2
 \end{equation}
 
 \end{frame}
