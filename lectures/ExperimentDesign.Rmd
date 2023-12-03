@@ -1,0 +1,317 @@
+---
+title: "Introduction to statistics: A first introduction to experiment design"
+runningheader: "Experiment design 1" # only for pdf output
+subtitle: "Introduction to statistics" # only for html output
+author: "Shravan Vasishth"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_handout: default
+  tufte::tufte_html:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+bibliography: book.bib
+link-citations: yes
+header-includes: |
+  \usepackage{tikz}
+  \usepackage{enumerate}
+  \usepackage[shortlabels]{enumitem}
+  \usepackage{amsmath}
+  \usepackage{comment}
+  \setcounter{secnumdepth}{3}
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(fig.width=6.5, fig.height=3)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+```
+
+\tableofcontents
+
+\clearpage
+
+Throughout, I will refer to the Stroop experiment we carried out in class, as a running example.
+
+As a reminder, the test data from three subjects look like this:
+
+```{r}
+dat<-read.table("testdata.txt",header=TRUE)
+head(dat)
+```
+
+We can rearrange the columns and choose only the relevant columns like this:
+
+```{r}
+dat<-dat[,c(4,1,5,3)]
+head(dat)
+```
+
+Remember that the columns `compatible` and `subj` should not be numerical values but factors.
+
+```{r}
+dat$subj<-factor(dat$subj)
+dat$compatible<-factor(dat$compatible)
+str(dat)
+```
+
+# Experiment-based research
+
+Experiments usually test predictions made by theories. 
+
+**Example**: There is a theory in cognitive psychology that it is harder to respond to a print color (green) if the written word represents another color (e.g., the word blue written in green).
+
+See: MacLeod, C. M. (1991). Half a century of research on the Stroop effect: an integrative review. Psychological Bulletin, 109(2), 163. https://psycnet.apa.org/record/1991-14380-001
+
+We can break down the experiment-design process into 
+several steps:
+
+- Step 1. Develop a hypothesis
+- Step 2. Create an experiment design to test the hypothesis
+- Step 3. Conduct the experiment
+- Step 4. Statistical inference (interpret the results)
+
+## Step 1: Develop a hypothesis
+
+Theories (usually) make predictions, which (if empirically testable), can be evaluated against data to either accept or reject the theory. The predictions can be expressed as specific hypotheses. 
+
+**Example** (simplifying quite a bit): In the Stroop task, incongruent conditions are harder to respond to than congruent conditions because a theory of cognitive processes proposes that *interference* causes processing difficulty.
+
+A common approach is to set up a so-called *null hypothesis* and then try to reject that hypothesis. Thus, we are taking a **falsificationist** approach to hypothesis testing. You can read more about some relevant philosophy of science discussions here:
+
+- Popper, K. R. (1963). Science as falsification. Conjectures and refutations, 1(1963), 33-39. https://shorturl.at/nvANR
+
+
+**Example 1**: In Stroop, we set up the hypothesis that there is *no difference* in the reaction times between the two conditions.
+**This is the more commonly used null hypothesis**.
+
+**Example 2**: We could have set up a different hypothesis, that the difference in the reaction times between the two conditions is 100 milliseconds (this could be based on some quantitative predictions of a computational model).
+
+**Example 3**: Yet another possible null hypothesis could be that the congruent condition is read *slower* than the incongruent condition.
+
+
+Whatever the null hypothesis is, the approach taken here is to 
+to try to reject this null hypothesis. 
+
+We will write the null hypothesis in Example 1 as below. $\mu$ is the true, unknown mean reaction time in each of the two conditions.
+
+\begin{equation}
+H_0: \mu_{incongruent} = \mu_{congruent}
+\end{equation}
+
+or:
+
+\begin{equation}
+H_0: \mu_{incongruent} - \mu_{congruent} = 0
+\end{equation}
+
+The null hypothesis in Example 2:
+
+\begin{equation}
+H_0: \mu_{incongruent} - \mu_{congruent} = 100
+\end{equation}
+
+The null hypothesis in Example 3:
+
+\begin{equation}
+H_0: \mu_{incongruent} <  \mu_{congruent}
+\end{equation}
+
+
+So, there is an assumption that there is some true, unknown mean
+reaction time for each condition of interest, and our null hypothesis is about the difference in these two means. Our first goal towards testing the null hypothesis of interest is to *estimate* these true unknown means (more on this soon).
+
+Notice that the **research hypothesis** is that the incongruent conditions are responded to *slower* than the congruent conditions. Formally, we could write this as an alternative hypothesis as:
+
+\begin{equation}
+H_{alternative}: \mu_{incongruent} > \mu_{congruent}
+\end{equation}
+
+The alternative hypothesis could be even more vague (even though the research hypothesis is more specific): 
+
+\begin{equation}
+H_{alternative}: \mu_{incongruent} \neq \mu_{congruent}
+\end{equation}
+
+The way that frequentist statistics is generally used is by focusing on the **null hypothesis**, and then trying to reject it. By the logic of negation, we then accept the alternative hypothesis.
+
+**Example of a typical hypothesis test in a frequentist setting**:
+
+\begin{equation}
+H_{0}: \mu_{incongruent} = \mu_{congruent}
+\end{equation}
+
+
+\begin{equation}
+H_{alternative}: \mu_{incongruent} \neq \mu_{congruent}
+\end{equation}
+
+If we reject the null, we can accept the alternative.
+
+## Steps 2-4
+
+\begin{itemize}
+\item Step 2. Create an experiment design to test the hypothesis
+\begin{itemize}
+\item Come up with a design (more on this later)
+\item Choose an experimental method
+\item Define dependent and independent variables
+\item Design experimental items
+\item Program experiment
+\end{itemize}
+\item Step 3.  Conduct the experiment 
+\begin{itemize}
+\item Test that the experiment actually runs as expected
+\item Collect test data, check that it's OK
+\item Collect real data
+\item Statistical data analysis
+\end{itemize}
+\item Step 4. Interpret the results
+\begin{itemize}
+\item Estimation
+\item Test hypothesis statistically
+\end{itemize}
+\end{itemize}
+
+*Independent variable*:
+The variable that will be explicitly manipulated by the experimenter (Stroop: congruency vs. incongruency).
+
+
+*Dependent variable*: The variable that will be measured (here, reaction time and accuracy).
+
+# Some key ideas in experiment design
+
+## Random sampling
+
+To answer the theoretical question about whether humans experience interference in the Stroop design, we will measure reaction time from a *sample* of people from the population of humans. This sample needs to be representative of the population we are interested in. Some example populations:
+
+- People with aphasia
+- Children at a particular stage of development
+- Unimpaired adults 
+- Non-native speakers of a language
+- People with autism / neurodiverse individuals
+
+Here, we are talking about samples of *people* from a population; this is how we would talk about samples in **ordinary language**.
+
+In **statistics**, we assume that the reaction times (or accuracy) from the subjects come from a population of reaction times (or accuracy). **In other words, both the population and samples are numbers**.
+
+Regarding the reaction times, formally, we will assume that the reaction times come from some *distribution* of reaction times; this is the population of reaction times. The reaction times are then a sample from this distribution. *I will elaborate on the idea of a distribution and sampling from a distribution next week.* However, you can see the distribution of reaction times from our test data here (I will explain later what freq = FALSE means):
+
+```{r}
+hist(dat$rt,freq=FALSE)
+```
+
+The above sample (shown below as dots) could be coming from some distribution, for example, a Normal distribution that might look like this:
+
+```{r echo=FALSE, warning=FALSE}
+means<-mean(dat$rt)
+stddev<-sd(dat$rt)
+x<-seq(500,2500,by=0.01)
+plot(x,dnorm(x,mean=means,sd=stddev),type="lines",
+     ylab="Density",xlab="Reaction time (ms)",
+     main="Distribution of reaction times")
+points(x=dat$rt,y=rep(0,length(dat$rt)))
+```
+
+Or it could be coming from this population of reaction times:
+
+```{r echo=FALSE, warning=FALSE}
+means<-mean(log(dat$rt))
+stddev<-sd(log(dat$rt))
+x<-seq(500,2500,by=0.01)
+plot(x,dlnorm(x,mean=means,sd=stddev),type="lines",
+     ylab="Density",xlab="Reaction time (ms)",
+     main="Distribution of reaction times")
+points(x=dat$rt,y=rep(0,length(dat$rt)))
+```
+
+
+Statistical theory requires that the sample we take is *random*.
+Informally, this means that we have independent data points that come from the same distribution.
+
+Similarly, the accuracy data could be assumed to be coming from a distribution called the Binomial distribution, with probability of getting a correct response being $115/119 \approx 0.97$:
+
+```{r}
+table(dat$correct)
+```
+
+## Defining a control condition and the logic of differences
+
+In experimental science, we will always have a **baseline condition**, also called a **control condition**, and a **treatment condition**, and we will always compare the dependent variable in the two conditions. 
+
+**Example**: In the Stroop design, the congruent condition is the baseline/control condition, and the incongruent condition is the treatment condition.
+
+Our reasoning is that whatever extra difficulty happens in the treatment condition is going to be relative to the baseline condition. Without a minimally different baseline condition, we have no way to interpret the dependent variable in the treatment condition.
+
+Our interest is in the difference in processing cost:
+
+**Treatment condition cost - Baseline condition cost = Difference**
+
+We can *estimate* this difference from our sample by computing the sample means in each of the two conditions:
+
+```{r}
+baseline<-mean(subset(dat,compatible==1)$rt)
+treatment<-mean(subset(dat,compatible==0)$rt)
+baseline
+treatment
+treatment-baseline
+```
+
+
+A practical consequence: our hypothesis test will almost always be about a **difference between two conditions or two sets of conditions** (more on the latter situation later).
+
+So, if we want to test the null hypothesis that 
+
+\begin{equation}
+H_0: \mu_{incongruent} - \mu_{congruent} = 0
+\end{equation}
+
+ our estimated difference from the data is 
+
+```{r}
+treatment-baseline
+```
+
+What we need is a way to figure out whether this observed difference is actually different from 0.
+We cannot be sure that it is, because of **random variability**.
+
+# Variability in the data
+
+The above observed difference between treatment and baseline could just be due to random variation in human behavioral responses.
+
+For example, we can generate random samples $y$ from a Normal distribution using the `rnorm` function we saw before.
+
+Here, the true mean is actually 0. So if the null hypothesis were that the mean is 0, the null hypothesis is actually true.
+
+So imagine that we collect a sample of 10 data points:
+
+```{r}
+y<-rnorm(10,mean=0,sd=50)
+```
+
+The sample mean is not 0:
+
+```{r}
+mean(y)
+```
+
+Can we reject the null hypothesis given this sample mean? 
+That's the question we will answer in this course.
+
+What if we ran the experiment 10 times? Would the sample mean be the same each time?
+
+```{r}
+for(i in 1:10){
+  y<-rnorm(10,mean=0,sd=50)
+  print(mean(y))
+}
+```
+
+The above simulation shows that the sample mean will vary from one experiment run to another. So, from any one experiment we cannot be sure that we have a sample mean that represents the true, unknown value of the mean (or, as in this case, the difference of two sample means).
+
+We need a method to establish whether our sample mean (or difference of sample means) tells us that we can/can't reject the null hypothesis. This is the issue that **null hypothesis testing** will tackle.
+
+To fully understand the method, we need some theoretical foundations and some terminology (next lecture).
