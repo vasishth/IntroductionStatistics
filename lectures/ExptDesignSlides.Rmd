@@ -1,0 +1,377 @@
+---
+title: "Experiment design and random variables"
+author: "Shravan Vasishth"
+date: "2023-12-03"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# The Stroop test data
+
+As a reminder, the HW 4 data from 40 subjects look like this:
+
+```{r}
+dat<-read.table("stroopdata.txt",header=FALSE)
+dat$subj<-rep(1:40,each=40)
+dat<-dat[,c(4,7,8,9)]
+colnames(dat)<-c("compatible","response","rt","subj")
+dat$subj<-factor(dat$subj)
+dat$compatible<-factor(dat$compatible)
+dat<-subset(dat,response!=3)
+dat$correct<-ifelse(dat$response==1,1,0)
+str(dat)
+```
+
+# Experiment-based research
+
+Experiments usually test predictions made by theories. 
+
+**Example**: There is a theory in cognitive psychology that it is harder to respond to a print color (green) if the written word represents another color (e.g., the word blue written in green).
+
+See: MacLeod, C. M. (1991). Half a century of research on the Stroop effect: an integrative review. Psychological Bulletin, 109(2), 163. https://psycnet.apa.org/record/1991-14380-001
+
+# Theory-free experiment-based research
+
+Sometimes people test predictions based on wacky "theories".
+
+**Example**: A theoretical claim that people can predict the future.
+
+See: Bem, D. J. (2011). Feeling the future: experimental evidence for anomalous retroactive influences on cognition and affect. Journal of personality and social psychology, 100(3), 407.
+
+
+# Steps in experiment design
+
+- Step 1. Develop a hypothesis
+- Step 2. Create an experiment design to test the hypothesis
+- Step 3. Conduct the experiment
+- Step 4. Statistical inference (interpret the results)
+
+# Step 1: Develop a hypothesis
+
+Theories (usually) make predictions, which (if empirically testable), can be evaluated against data to either accept or reject the theory. The predictions can be expressed as specific hypotheses. 
+
+**Example** (simplifying quite a bit): In the Stroop task, incongruent conditions are harder to respond to than congruent conditions because a theory of cognitive processes proposes that *interference* causes processing difficulty.
+
+# The null hypothesis
+
+A common approach is to set up a so-called *null hypothesis* and then try to reject that hypothesis. 
+
+# The null hypothesis: Example 1
+
+
+**Example 1**: In Stroop, we set up the hypothesis that there is *no difference* in the reaction times between the two conditions.
+**This is the more commonly used null hypothesis**.
+
+# The null hypothesis: Example 2
+
+**Example 2**: We could have set up a different hypothesis, that the difference in the reaction times between the two conditions is 100 milliseconds (this could be based on some quantitative predictions of a computational model).
+
+# The null hypothesis: Example 3
+
+**Example 3**: Yet another possible null hypothesis could be that the congruent condition is read *slower* than the incongruent condition.
+
+# Null hypothesis rejection
+
+Whatever the null hypothesis is, the approach taken here is to 
+to try to reject this null hypothesis. 
+
+In Example 1 as below. $\mu$ is the true, unknown mean reaction time in each of the two conditions.
+
+\begin{equation}
+H_0: \mu_{incongruent} = \mu_{congruent}
+\end{equation}
+
+or:
+
+\begin{equation}
+H_0: \mu_{incongruent} - \mu_{congruent} = 0
+\end{equation}
+
+# Null hypothesis rejection
+
+The null hypothesis in Example 2:
+
+\begin{equation}
+H_0: \mu_{incongruent} - \mu_{congruent} = 100
+\end{equation}
+
+# Null hypothesis rejection
+
+The null hypothesis in Example 3:
+
+\begin{equation}
+H_0: \mu_{incongruent} <  \mu_{congruent}
+\end{equation}
+
+# Null hypothesis rejection
+
+So, there is an assumption that there is some true, unknown mean
+reaction time for each condition of interest, and our null hypothesis is about the difference in these two means. 
+
+Our first goal towards testing the null hypothesis of interest is to *estimate* these true unknown means (more on this soon).
+
+# The research vs. alternative hypotheis
+
+Notice that the **research hypothesis** is that the incongruent conditions are responded to *slower* than the congruent conditions. Formally, we could write this as an alternative hypothesis as:
+
+\begin{equation}
+H_{alternative}: \mu_{incongruent} > \mu_{congruent}
+\end{equation}
+
+The alternative hypothesis could be even more vague: 
+
+\begin{equation}
+H_{alternative}: \mu_{incongruent} \neq \mu_{congruent}
+\end{equation}
+
+
+The way that frequentist statistics is generally used is by focusing on the **null hypothesis**, and then trying to reject it. 
+
+By the logic of negation, we then accept the alternative hypothesis (which may be more vague than the research hypothesis).
+
+# The typical hypothesis test in psychology and linguistics
+
+**Example of a typical hypothesis test in a frequentist setting**:
+
+\begin{equation}
+H_{0}: \mu_{incongruent} = \mu_{congruent}
+\end{equation}
+
+\begin{equation}
+H_{alternative}: \mu_{incongruent} \neq \mu_{congruent}
+\end{equation}
+
+We will mostly assume this set of null and alternative hypotheses.
+
+# The typical hypothesis test in psychology and linguistics
+
+
+If we reject the null, we can accept the alternative.
+
+# Dependent and independent variables
+
+*Independent variable*:
+The variable that will be explicitly manipulated by the experimenter (Stroop: congruency vs. incongruency).
+
+
+*Dependent variable*: The variable that will be measured (here, reaction time and accuracy).
+
+# Some key ideas in experiment design
+
+- Random sampling
+- Control vs. treatment conditions
+
+# First idea: Random sampling
+
+To answer the theoretical question about whether humans experience interference in the Stroop design, we will measure reaction time from a *sample* of people from the population of humans. This sample needs to be representative of the population we are interested in. Some example populations:
+
+- People with aphasia
+- Children at a particular stage of development
+- Unimpaired adults 
+- Non-native speakers of a language
+- People with autism / neurodiverse individuals
+
+Here, we are talking about samples of *people* from a population; this is how we would talk about samples in **ordinary language**.
+
+# First key idea: Random sampling
+
+- In **statistics**, we assume that the reaction times (or accuracy) from the subjects come from a population of reaction times (or accuracy). **In other words, both the population and samples are numbers**.
+- This population of reaction times is assumed to be a **random variable" and is characterized by a **probability distribution**.
+
+# Random variables (reaction time)
+
+- Regarding reaction times, formally, we will assume that the reaction times come from some *distribution* of reaction times; this is the population of reaction times. 
+- The reaction times from 40 subjects are then a *sample* from this distribution. 
+
+# Random variables (reaction time)
+
+Formally, we say that the reaction times are being generated by a **random variable**, which has associated with it a **probability distribution** that describes the population's distribution.
+
+Mathematically, we write:
+
+\begin{equation}
+X \sim Normal(\mu, \sigma)
+\end{equation}
+
+$\sim$ is called a tilde and is read "is generated from".
+
+- $\mu$ and $\sigma$ are called **parameters** that determine the shape of the Normal distribution (more on this next week).
+- We can estimate these parameters from the sample data.
+
+# Random variables (reaction time)
+
+Consider the sample data:
+
+```{r}
+hist(dat$rt,freq=FALSE)
+```
+
+# The generative distribution
+
+The above sample (shown below as dots) could be coming from some distribution, for example, a Normal distribution that might look like this:
+
+$X \sim Normal(\mu,\sigma)$
+
+```{r echo=FALSE, warning=FALSE, fig.height=3}
+means<-with(dat,tapply(rt,IND=list(subj,compatible),mean))
+grand_mean<- mean(means)
+sd1<-sd(means[,1])
+sd2<-sd(means[,2])
+stddev<-sd1
+x<-seq(0,2500,by=0.01)
+plot(x,dnorm(x,mean=grand_mean,sd=sd1),type="lines",
+     ylab="Density",xlab="Reaction time (ms)",
+     main="Distribution of reaction times")
+points(x=dat$rt,y=rep(0,length(dat$rt)))
+```
+
+# Independent data = random samples
+
+Statistical theory requires that the sample we take is *random*.
+Informally, this means that we have independent data points that come from the same distribution.
+
+Here, we have independent data points in each condition from each of the 40 subjects.
+
+# Random variables (accuracy)
+
+Similarly, the accuracy data could be assumed to be coming from a distribution called the Binomial distribution:
+
+```{r echo=TRUE}
+table(dat$correct)
+```
+
+$Y \sim Binomial(n,\theta)$
+
+Here, $n$ is the number of trials, and $\theta$ is a parameter representing the probability of a correct response. We can estimate it from the data.
+
+Next lecture: the properties of random variables.
+
+# Key idea 2: Defining a control condition and the logic of differences
+
+In experimental science, we will always have a **baseline condition**, also called a **control condition**, and a **treatment condition**, and we will always compare the dependent variable in the two conditions. 
+
+**Example**: In the Stroop design, the congruent condition is the baseline/control condition, and the incongruent condition is the treatment condition.
+
+Our reasoning is that whatever extra difficulty happens in the treatment condition is going to be relative to the baseline condition. Without a minimally different baseline condition, we have no way to interpret the dependent variable in the treatment condition.
+
+# Goal: estimating the difference in processing cost (treament - control)
+
+Our interest is in the difference in processing cost:
+
+**Treatment condition cost - Baseline condition cost = Difference**
+
+We can *estimate* this difference from our sample by computing the sample means in each of the two conditions:
+
+```{r echo=TRUE}
+baseline<-mean(subset(dat,compatible==1)$rt)
+treatment<-mean(subset(dat,compatible==0)$rt)
+baseline; treatment
+treatment-baseline
+```
+
+# Goal: estimating the difference in processing cost (treatment - control)
+
+A practical consequence: our hypothesis test will almost always be about a **difference between two conditions or two sets of conditions** (more on the latter situation later).
+
+
+
+So, if we want to test the null hypothesis that 
+
+\begin{equation}
+H_0: \delta = \mu_{incongruent} - \mu_{congruent} = 0
+\end{equation}
+
+ our estimated difference of $\delta$ from the data is 
+
+```{r}
+treatment-baseline
+```
+
+# The hypothesis test
+
+What we need is a way to figure out whether this observed difference is actually different from 0.
+We cannot be sure that it is, because of **random variability**.
+
+# A problem: Variability in the data
+
+The above observed difference between treatment and baseline could just be due to random variation in human behavioral responses.
+
+# A problem: Variability in the data
+
+For example, we can generate random samples $y$ from a Normal distribution using the `rnorm` function we saw before.
+
+Here, the true mean is actually 0. So if the null hypothesis were that the mean is 0, the null hypothesis is actually true.
+
+# A problem: Variability in the data
+
+So imagine that we collect a sample of 10 data points:
+
+```{r,echo=TRUE}
+y<-rnorm(10,mean=0,sd=50)
+```
+
+The sample mean is not 0:
+
+```{r,echo=TRUE}
+mean(y)
+```
+
+Can we reject the null hypothesis given this sample mean? 
+That's the question we will answer in this course.
+
+# Variability in repeated runs of an experiment
+
+What if we ran the experiment 10 times? Would the sample mean be the same each time?
+
+```{r,echo=TRUE}
+for(i in 1:10){
+  y<-rnorm(10,mean=0,sd=50)
+  print(mean(y))
+}
+```
+
+# Variability in repeated runs of an experiment
+
+- The sample mean will vary from one experiment run to another. 
+- From one experiment, we cannot be sure that we have a sample mean that represents the true, unknown value of the mean (or, as in this case, the difference of two sample means).
+- We need a method to establish whether our sample mean (or difference of sample means) tells us that we can/can't reject the null hypothesis. 
+- This is the issue that **null hypothesis testing** will tackle.
+
+To fully understand the method, we need some foundational ideas about random variables and distributions and some terminology (next lecture).
+
+# Summary
+
+- Experimental data $x_1,\dots, x_n$ are assumed to be random samples from a population
+- For now,  $x_1,\dots, x_n$ means that the mean rt from each subject in each condition is independent 
+- The population can be characterized as a random variable that has a particular distribution; e.g., $X \sim Normal(\mu,\sigma)$
+- We can estimate the parameters $\mu,\sigma$ from the data
+- We will set up a null hypothesis and determine whether we can reject it using the estimates from the data
+- It is common to look at a *difference* of means between a treatment and control condition:
+
+# Summary
+
+The difference in means in the Stroop data:
+
+```{r,echo=TRUE,fig.height=3}
+head(means)
+d<-means[,1]-means[,2]
+head(d)
+```
+# Summary 
+
+The distribution of the difference in means in the Stroop data:
+
+```{r,echo=TRUE,fig.height=3}
+hist(d)
+```
+
+# What's coming soon
+
+The null hypothesis test we will are going to build up to is the one-sample t-test.
+
+```{r,echo=TRUE}
+t.test(d)
+```
